@@ -8,9 +8,11 @@ from typing import Dict, List, Union, Optional
 from .layers import Linear, Sequential
 from .optimizers import Optimizer
 from .losses import Loss
-from .data_utils import DataLoader
+from .data_utils import DataLoader, Dataset
 from .visualizer import TrainingVisualizer, KFoldVisualizer
 from .schedulers import LRScheduler, ExponentialLRScheduler, WarmupLRScheduler
+from .optimizers import SGD
+from .cross_validator import CrossValidator
 
 class Trainer:
     def __init__(self, model: Sequential, loss_fn: Loss, optimizer: Optimizer) -> None:
