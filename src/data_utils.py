@@ -73,29 +73,63 @@ class DataLoader:
    
    
 # functions to generate synthetic datasets
-def generate_spiral_data(n_points_per_class: int, n_classes: int) -> Tuple[np.ndarray, np.ndarray]:
-    '''
-    Generate spiral data for classification.
-    n_points_per_class: number of points per class
-    n_classes: number of classes
-    return: tuple (X, y_one_hot)
-    X: 2D array of shape (n_samples, 2) with the data points
-    y_one_hot: 2D array of shape (n_samples, n_classes) with one-hot encoded labels
-    '''
-    x = []
-    y = []
-    for j in range(n_classes):
-        ix = range(n_points_per_class * j, n_points_per_class * (j + 1))
-        r = np.linspace(0.0, 1, n_points_per_class)
-        t = np.linspace(j * 4, (j + 1) * 4, n_points_per_class) + np.random.randn(n_points_per_class) * 0.2
-        x1 = r * np.sin(t)
-        x2 = r * np.cos(t)
-        x.append(np.c_[x1, x2])
-        y.append(np.full(n_points_per_class, j))
-    x = np.vstack(x)
-    y = np.hstack(y)
-    y_one_hot = np.eye(n_classes)[y]
-    return x, y_one_hot
+
+def generate_spiral_data(
+    n_samples: int = 1500,
+    n_classes: int = 3,
+    noise: float = 0.2,
+    random_state: int = None
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Generate a 2D “spiral” synthetic classification dataset.
+
+    Args:
+        n_samples       Total number of points to generate (if not divisible by n_classes, the remainder is dropped).
+        n_classes       Number of spiral arms (= number of classes).
+        noise           Standard deviation of Gaussian noise added to the angle (controls “fuzziness” of each spiral).
+        random_state    If provided, seed for NumPy’s RNG for reproducibility.
+
+    Returns:
+        X: np.ndarray of shape (n_used, 2)   # n_used = (n_samples // n_classes) * n_classes
+           Each row is a 2D point on one of the spirals.
+        y: np.ndarray of shape (n_used,)     # integer labels in {0, ... , n_classes-1}
+    """
+    if random_state is not None:
+        np.random.seed(random_state)
+
+    # Determine how many points per class. Drop any remainder.
+    n_points_per_class = n_samples // n_classes
+    #n_used = n_points_per_class * n_classes
+
+    x_list = []
+    y_list = []
+
+    for class_idx in range(n_classes):
+        # r goes from 0.0 out to 1.0 (radial coordinate)
+        r = np.linspace(0.0, 1.0, n_points_per_class)
+        # theta sweeps out 4pi per class (so the spirals loop around twice),
+        # offset by class_idx*4 so each class has its own arm.
+        t = np.linspace(class_idx * 4.0, (class_idx + 1) * 4.0, n_points_per_class) 
+        # Add Gaussian “noise” to the angle t
+        t = t + np.random.randn(n_points_per_class) * noise
+
+        # Convert (r, t) to Cartesian coordinates
+        x1 = r * np.sin(t * np.pi / 2)  # optionally -- multiply t by pi/2 for a tighter spiral
+        x2 = r * np.cos(t * np.pi / 2)
+
+        # Stack into (n_points_per_class, 2)
+        x_class = np.column_stack([x1, x2])
+        y_class = np.full(n_points_per_class, class_idx, dtype=np.int64)
+
+        x_list.append(x_class)
+        y_list.append(y_class)
+
+    # Concatenate all classes
+    X = np.vstack(x_list)   # shape: (n_used, 2)
+    y = np.hstack(y_list)   # shape: (n_used,)
+
+    return X, y
+
 
 def generate_moons_data(n_samples: int, noise: float = 0.1) -> Tuple[np.ndarray, np.ndarray]:
     '''
