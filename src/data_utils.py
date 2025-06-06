@@ -72,7 +72,7 @@ class DataLoader:
         return DataLoader(dataset, train_indices), DataLoader(dataset, test_indices)
    
    
-# functions to generate synthetic datasets
+# function to generate synthetic dataset - spiral.
 
 def generate_spiral_data(
     n_samples: int = 1500,
@@ -130,22 +130,7 @@ def generate_spiral_data(
 
     return X, y
 
-
-def generate_moons_data(n_samples: int, noise: float = 0.1) -> Tuple[np.ndarray, np.ndarray]:
-    '''
-    Generate two interleaving half circles (moons) for classification.
-    n_samples: total number of samples
-    noise: standard deviation of Gaussian noise added to the data
-    return: tuple (X, y)
-    X: 2D array of shape (n_samples, 2) with the data points
-    y: 1D array of shape (n_samples,) with labels (0 or 1)
-    '''
-
-    X, y = make_moons(n_samples=n_samples, noise=noise)
-    return X, y
-
-
-#functions to download and return classic dataset
+#download and return mnist dataset
 def download_mnist_data() -> Tuple[np.ndarray, np.ndarray]:
     '''
     Download the MNIST dataset and return the training and test data.

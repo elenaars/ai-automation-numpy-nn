@@ -32,7 +32,15 @@ def main():
     
     #parse command line arguments
     parser = argparse.ArgumentParser(description="Train a neural network model.")
-    parser.add_argument('--dataset', type=str, default='spiral', help='Dataset to use (spiral, mnist, moons)')
+    parser.add_argument("--dataset", choices=["mnist", "digits", "synthetic"], default="mnist",  help='Dataset to use (mnist, digits, or synthetic: spirals)')
+    parser.add_argument("--n‐samples", type=int, default=1000,
+                    help="Number of total points when using synthetic data")
+    parser.add_argument("--n‐features", type=int, default=2,
+                    help="Number of features/dimensions for synthetic data")
+    parser.add_argument("--n‐classes", type=int, default=2,
+                    help="Number of classes for synthetic data")
+    parser.add_argument("--class‐sep", type=float, default=1.0,
+                    help="Cluster separation (for make_classification or similar)")
     parser.add_argument('--data-dir', type=str, default='data', help='Directory to save/load dataset')
     parser.add_argument('--epochs', type=int, default=20, help='Number of epochs to train')
     parser.add_argument('--batch-size', type=int, default=64, help='Batch size for training')
@@ -53,7 +61,7 @@ def main():
     match args.dataset:
         case 'spiral':
             print("Generating spiral dataset...")
-            generate_spiral_data(args.data_dir)    
+            generate_spiral_data()    
 
 
 
