@@ -26,6 +26,7 @@ from src.losses import CrossEntropySoftMax
 from src.optimizers import SGD, WarmupLRScheduler
 from src.trainer import Trainer
 from src.cross_validator import CrossValidator
+from src.utils import one_hot_encode
 
 
 def main():

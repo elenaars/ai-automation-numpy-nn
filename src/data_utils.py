@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.datasets import make_moons, fetch_openml
 
 
+
 # Dataset and DataLoader classes to wrap the data and operate on batches
 class Dataset:
     '''
@@ -141,9 +142,7 @@ def download_mnist_data() -> Tuple[np.ndarray, np.ndarray]:
     mnist = fetch_openml('mnist_784', version=1)
     X = mnist.data.values.astype(np.float32) / 255.0  # Normalize to [0, 1]
     y = mnist.target.astype(np.int64)
-    n_classes = 10
-    y_one_hot = np.eye(n_classes)[y]
-    return X, y_one_hot
+    return X, y
 
 #download and return fashion mnist dataset
 def download_fashion_mnist_data() -> Tuple[np.ndarray, np.ndarray]:
@@ -156,9 +155,7 @@ def download_fashion_mnist_data() -> Tuple[np.ndarray, np.ndarray]:
     fashion_mnist = fetch_openml('Fashion-MNIST', version=1)
     X = fashion_mnist.data.values.astype(np.float32) / 255.0  # Normalize to [0, 1]
     y = fashion_mnist.target.astype(np.int64)
-    n_classes = 10
-    y_one_hot = np.eye(n_classes)[y]
-    return X, y_one_hot
+    return X, y
 
 #download and return digits dataset
 def download_digits_data() -> Tuple[np.ndarray, np.ndarray]:
@@ -171,9 +168,7 @@ def download_digits_data() -> Tuple[np.ndarray, np.ndarray]:
     digits = fetch_openml('mnist_784', version=1)
     X = digits.data.values.astype(np.float32) / 255.0  # Normalize to [0, 1]
     y = digits.target.astype(np.int64)
-    n_classes = 10
-    y_one_hot = np.eye(n_classes)[y]
-    return X, y_one_hot
+    return X, y
 
 #download and return iris dataset
 def download_iris_data() -> Tuple[np.ndarray, np.ndarray]:
@@ -186,7 +181,5 @@ def download_iris_data() -> Tuple[np.ndarray, np.ndarray]:
     iris = fetch_openml('iris', version=1)
     X = iris.data.values.astype(np.float32)
     y = iris.target.astype(np.int64)
-    n_classes = len(np.unique(y))
-    y_one_hot = np.eye(n_classes)[y]
-    return X, y_one_hot
+    return X, y
  

@@ -2,7 +2,7 @@
 
 import numpy as np
 
-def one_hot_encodedef(labels: np.ndarray, num_classes: int = None) -> np.ndarray:
+def one_hot_encode(labels: np.ndarray, num_classes: int = None) -> np.ndarray:
     '''
     Convert any array of integer/string labels to one-hot.
 
