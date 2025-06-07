@@ -36,8 +36,6 @@ def main():
     parser.add_argument("--dataset", choices=["mnist", "digits", "synthetic"], default="mnist",  help='Dataset to use (mnist, digits, or synthetic: spirals)')
     parser.add_argument("--n‐samples", type=int, default=1000,
                     help="Number of total points when using synthetic data")
-    parser.add_argument("--n‐features", type=int, default=2,
-                    help="Number of features/dimensions for synthetic data")
     parser.add_argument("--n‐classes", type=int, default=2,
                     help="Number of classes for synthetic data")
     parser.add_argument("--class‐sep", type=float, default=1.0,
@@ -60,16 +58,37 @@ def main():
 
     # download / generate dataset depending on many options
     match args.dataset:
-        case 'spiral':
+        case 'synthetic':
+            # Generate synthetic spiral dataset
             print("Generating spiral dataset...")
-            generate_spiral_data()    
+            X, y = generate_spiral_data(args.n_samples, args.n_classes, args.class_sep, args.seed)    
+        case 'mnist':
+            # Load MNIST dataset
+            print("Loading MNIST dataset...")
+            X, y = download_mnist_data()
+        case 'digits':
+            # Load Digits dataset
+            print("Loading Digits dataset...")
+            X, y = download_digits_data()
+        case 'fashion_mnist':
+            # Load Fashion MNIST dataset
+            print("Loading Fashion MNIST dataset...")
+            X, y = download_fashion_mnist_data()
+        case 'iris':
+            # Load Iris dataset
+            print("Loading Iris dataset...")
+            X, y = download_iris_data()
+        case _:
+            raise ValueError(f"Unknown dataset: {args.dataset}")
 
-
-
-    x_train, y_train = generate_spiral_data(1000, 5)
-    x_test, y_test = generate_spiral_data(200, 5)
-    train_dataset = Dataset(x_train, y_train)
-    test_dataset = Dataset(x_test, y_test)
+    #converl label to one-hot encoding
+    print("Converting labels to one-hot encoding...")
+    y = one_hot_encode(y, num_classes=5) if args.dataset == 'synthetic' else one_hot_encode(y)
+    # divide dataset into train and test sets
+    print("Splitting dataset into train and test sets...")
+    train_dataset, test_dataset = DataLoader.holdout_split(X, y, test_size=0.2)
+    print(f"Train set size: {len(train_dataset)}, Test set size: {len(test_dataset)}")
+    
 
     model = Sequential([
         Linear(2,64),
