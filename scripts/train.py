@@ -86,7 +86,7 @@ def main():
     y = one_hot_encode(y, num_classes=5) if args.dataset == 'synthetic' else one_hot_encode(y)
     # divide dataset into train and test sets
     print("Splitting dataset into train and test sets...")
-    train_dataset, test_dataset = DataLoader.holdout_split(X, y, test_size=0.2)
+    train_dataset, test_dataset = DataLoader.holdout_split(Dataset(X, y), test_size=0.2, batch_size=args.batch_size)
     print(f"Train set size: {len(train_dataset)}, Test set size: {len(test_dataset)}")
     
 

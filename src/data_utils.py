@@ -54,7 +54,7 @@ class DataLoader:
         return int(np.ceil(len(self.indices) / self.batch_size))
     
     @staticmethod
-    def holdout_split(dataset: Dataset, test_size: float = 0.2) -> Tuple['DataLoader', 'DataLoader']:
+    def holdout_split(dataset: Dataset, test_size: float = 0.2, batch_size: int = 32) -> Tuple['DataLoader', 'DataLoader']:
         """
         Splits the dataset into training and testing sets.
         Args:
@@ -70,7 +70,7 @@ class DataLoader:
         split_index = int(len(dataset) * (1 - test_size))
         train_indices = indices[:split_index]
         test_indices = indices[split_index:]
-        return DataLoader(dataset, train_indices), DataLoader(dataset, test_indices)
+        return DataLoader(dataset, train_indices, batch_size=batch_size, shuffle = True), DataLoader(dataset, test_indices, batch_size=batch_size, shuffle = False)
    
    
 # function to generate synthetic dataset - spiral.
