@@ -84,7 +84,7 @@ def main():
         case _:
             raise ValueError(f"Unknown dataset: {args.dataset}")
 
-    #converl label to one-hot encoding
+    #convert label to one-hot encoding
     print("Converting labels to one-hot encoding...")
     y = one_hot_encode(y, num_classes=5) if args.dataset == 'synthetic' else one_hot_encode(y)
     # divide dataset into train and test sets

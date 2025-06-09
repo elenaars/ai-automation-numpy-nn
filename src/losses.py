@@ -4,7 +4,7 @@ from typing import List, Tuple, Optional, Union, Dict, Any
 import numpy as np
 
 
-def __softmax(x: np.ndarray) -> np.ndarray:
+def softmax(x: np.ndarray) -> np.ndarray:
     '''
     Compute softmax values for each sets of scores in x.
     x: 2D array of shape (n_samples, n_classes)
@@ -92,7 +92,7 @@ class CrossEntropySoftMax(Loss):
         '''
         assert y_true.shape == y_pred_logits.shape, f"True labels shape {y_true.shape} does not match predicted logits shape {y_pred_logits.shape}"
         #apply softmax to the predictions
-        probs = __softmax(y_pred_logits)
+        probs = softmax(y_pred_logits)
         loss = -np.sum(y_true * np.log(probs + 1e-15)) / y_true.shape[0]
         return loss, probs
 

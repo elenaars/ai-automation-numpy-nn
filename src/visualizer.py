@@ -72,6 +72,10 @@ class TrainingVisualizer:
         plt.show()     
     
     def plot_decision_boundary(self, model: Sequential, x_train: np.ndarray, y_train: np.ndarray, ax: Optional[plt.Axes] = None) -> None:
+        
+        if x_train.shape[1] != 2:
+            return
+        
         if ax is None:
             fig, ax = plt.subplots(figsize=(8, 6))
         
