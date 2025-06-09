@@ -1,5 +1,5 @@
 # class TrainingVisualizer that stores the training history and plots the loss and accuracy
-
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import Optional
@@ -15,7 +15,7 @@ class TrainingVisualizer:
     TrainingVisualizer class to store the training history and plot the loss and accuracy.
     It provides methods to update the training history and plot the loss and accuracy.
     '''
-    def __init__(self)->None:
+    def __init__(self, exp_dir = 'plots')->None:
         self.history = {
             'loss': [],
             'val_loss': [],
@@ -24,6 +24,9 @@ class TrainingVisualizer:
         }
         self.grid = None
         self.grid_coords = None
+        self.exp_dir = exp_dir
+        if not os.path.exists(exp_dir):
+            os.makedirs(exp_dir)
         
     def update(self, loss: float, val_loss: float, train_acc: float, val_acc: float):
         '''
@@ -41,7 +44,7 @@ class TrainingVisualizer:
         self.history['train_acc'].append(train_acc)
         self.history['val_acc'].append(val_acc)
 
-    def plot_metrics_history(self) -> None:
+    def plot_metrics_history(self,  filename="metrics_history.png") -> None:
         '''
         Plot the training history.
         It plots the loss and accuracy for both training and validation sets.
@@ -68,10 +71,12 @@ class TrainingVisualizer:
         ax2.set_ylabel('Accuracy (%)')
         ax2.legend()
         
-        plt.tight_layout()
-        plt.show()     
+        filepath = os.path.join(self.exp_dir, filename)
+        plt.close()
+        print(f"Saved training plot to {filepath}")
+           
     
-    def plot_decision_boundary(self, model: Sequential, x_train: np.ndarray, y_train: np.ndarray, ax: Optional[plt.Axes] = None) -> None:
+    def plot_decision_boundary(self, model: Sequential, x_train: np.ndarray, y_train: np.ndarray, ax: Optional[plt.Axes] = None, filename="decision_boundary.png") -> None:
         
         if x_train.shape[1] != 2:
             return
@@ -124,10 +129,13 @@ class TrainingVisualizer:
         # Make plot more aesthetic
         ax.grid(True, alpha=0.2)
         plt.tight_layout()
-        if ax is None:
-            plt.show()
+
+        filepath = os.path.join(self.exp_dir, filename)
+        plt.savefig(filepath)
+        plt.close()
+        print(f"Saved decision boundary plot to {filepath}")
         
-    def weights_gradients_heatmap(self, model: Sequential, optimizer: Optimizer, ax: Optional[plt.Axes]=None) -> None:
+    def weights_gradients_heatmap(self, model: Sequential, optimizer: Optimizer, ax: Optional[plt.Axes]=None, filename="weights_heatmap.png") -> None:
         '''
         Plot the weights and their updates during training.
         Args:
@@ -193,14 +201,17 @@ class TrainingVisualizer:
 
         plt.suptitle('Weight Values and Their Updates', y=1.02, fontsize=14)
     
-        if ax is None:
-            plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust layout to prevent overlap
-            plt.show()
+        filepath = os.path.join(self.exp_dir, filename)
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust layout to prevent overlap
+        plt.savefig(filepath)
+        plt.close()
+        print(f"Saved weights heatmap plot to {filepath}")
+        
         
     
     
         
-    def plot_loss_landscape(self, model: Sequential, loader: DataLoader, loss_fn: Loss, ax: Optional[plt.Axes]=None)->None:
+    def plot_loss_landscape(self, model: Sequential, loader: DataLoader, loss_fn: Loss, ax: Optional[plt.Axes]=None, filename="loss_landscape.png")->None:
         """Visualize loss landscape around current weights"""
         if ax is None:
             fig, ax = plt.subplots(figsize=(8, 6))
@@ -240,22 +251,28 @@ class TrainingVisualizer:
         ax.set_ylabel('Loss')
         ax.set_title('Loss Landscape')
         ax.grid(True)
-        if ax is None:
-            plt.show()
+        
+        filepath = os.path.join(self.exp_dir, filename)
+        plt.savefig(filepath)
+        plt.close()
+        print(f"Saved loss landscape plot to {filepath}")
+
         
 
 class KFoldVisualizer(TrainingVisualizer):
     """Extended visualizer for k-fold cross validation"""
-    def __init__(self, k_folds: int) -> None:
+    def __init__(self, k_folds: int, exp_dir='kfold_plots') -> None:
         super().__init__()
         self.k_folds = k_folds
         self.fold_histories = []
+        self.exp_dir = exp_dir
+        os.makedirs(self.exp_dir, exist_ok=True)
         
     def add_fold_history(self, fold_history: dict) ->None:
         """Store history for one fold"""
         self.fold_histories.append(fold_history)
     
-    def plot_k_fold_results(self)-> None:
+    def plot_k_fold_results(self, filename="kfold_results.png")-> None:
         """Plot aggregated results across folds"""
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
         
@@ -288,5 +305,8 @@ class KFoldVisualizer(TrainingVisualizer):
         ax2.set_ylabel('Accuracy (%)')
         ax2.legend()
         
+        filepath = os.path.join(self.exp_dir, filename)
         plt.tight_layout()
-        plt.show()
+        plt.savefig(filepath)
+        plt.close()
+        print(f"Saved K-fold results plot to {filepath}")
