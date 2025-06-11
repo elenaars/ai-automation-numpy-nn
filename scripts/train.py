@@ -52,6 +52,7 @@ def main():
     parser.add_argument('--experiment-name', type=str, default='demo_run', help='Name of the experiment for logging')
     parser.add_argument('--hidden-dim', type=int, default=128, help='Hidden dimension for the model')
     parser.add_argument('--seed', type=int, default=None, help='Random seed for reproducibility')
+    parser.add_argument('--plots-dir', type=str, default='plots', help='Directory to save plots')
     args = parser.parse_args()
 
 
@@ -124,6 +125,7 @@ def main():
     trainer = Trainer(model=model,
                       loss_fn=loss_fn,
                       optimizer=optimizer,
+                      plots_dir=args.plots_dir
                       #experiment_name=args.experiment_name,
                       #log_dir=os.path.join(args.data_dir, "logs"),
                       #save_dir=os.path.join(args.data_dir, "models"),
@@ -142,7 +144,7 @@ def main():
         show_plots_logs=True,
         lr_scheduler=lr_scheduler,
         weight_decay=args.weight_decay,
-        momentum=args.momentum,
+        momentum=args.momentum
         )
 
     # Create test loader and evaluate

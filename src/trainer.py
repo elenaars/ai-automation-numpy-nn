@@ -1,5 +1,6 @@
 # class Trainer that governs the training process, using the DataLoader, ValidationStrategy, and Optimizer
 
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -15,11 +16,13 @@ from .optimizers import SGD
 from .cross_validator import CrossValidator
 
 class Trainer:
-    def __init__(self, model: Sequential, loss_fn: Loss, optimizer: Optimizer) -> None:
+    def __init__(self, model: Sequential, loss_fn: Loss, optimizer: Optimizer, plots_dir = 'plots') -> None:
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
-        self.visualizer = TrainingVisualizer()
+        self.plots_dir = plots_dir
+        os.makedirs(plots_dir, exist_ok=True)
+        self.visualizer = TrainingVisualizer(exp_dir=plots_dir)
 
     def train(self, train_loader: DataLoader, val_loader: DataLoader, epochs: int = 1000,  show_plots_logs:bool = True, log_interval:int = 200, patience: int = 20, min_delta: float = 1e-4, lr_scheduler: Optional[LRScheduler] = None, debug: bool = False, **kwargs) -> Dict[str, List[float]]:
         '''
@@ -184,6 +187,10 @@ class Trainer:
             # Print loss every log_interval epochs
             if show_plots_logs and epoch % log_interval == 0:
                 
+                
+                epoch_dir = os.path.join(self.visualizer.exp_dir, f'epoch_{epoch}')
+                os.makedirs(epoch_dir, exist_ok=True)
+                
                 # Create a figure with subplots for all visualizations
                 fig = plt.figure(figsize=(15, 12))
                 fig.set_facecolor('none')
@@ -207,7 +214,12 @@ class Trainer:
             
             
                 plt.tight_layout()
-                plt.show()
+                
+                # Save the figure to a file
+                filepath = os.path.join(epoch_dir, "combined_visualization.png")
+                plt.savefig(filepath)
+                print(f"Saved visualization plot to {filepath}")
+                plt.close()               
                     
                 # Print essential metrics
                 print(f"Epoch {epoch}: Loss={epoch_loss:.4f}, Val Loss={val_loss:.4f}, "
@@ -270,13 +282,16 @@ class Trainer:
         return np.mean(running_acc) if running_acc else 0.0  # Return mean of the last few accuracies
     
     
-    def train_with_cv(self, dataset: Dataset, cv: CrossValidator, **kwargs) -> Dict[str, Union[float, List[float], Sequential, KFoldVisualizer]]:
+    def train_with_cv(self, dataset: Dataset, cv: CrossValidator, plots_dir='kfold_plots', **kwargs) -> Dict[str, Union[float, List[float], Sequential, KFoldVisualizer]]:
         """Train with cross-validation and return the best model"""
-        cv_visualizer = KFoldVisualizer(len(cv.get_folds(dataset)))
+        
+        kfold_dir = os.path.join(self.plots_dir, 'kfold')
+        os.makedirs(kfold_dir, exist_ok=True)
+        
+        cv_visualizer = KFoldVisualizer(len(cv.get_folds(dataset)), exp_dir=kfold_dir)
         fold_scores = []
         best_model = None
         best_score = float('inf')
-        
  
                 
         # Store initial model architecture
@@ -299,9 +314,13 @@ class Trainer:
         
         for fold_idx, (train_idx, val_idx) in enumerate(cv.get_folds(dataset)):
             print(f"\nTraining Fold {fold_idx + 1}")
+        
+            
+            fold_dir = os.path.join(self.plots_dir, f'fold_{fold_idx + 1}')
+            os.makedirs(fold_dir, exist_ok=True)
             
             # Reset visualization history for each fold
-            self.visualizer = TrainingVisualizer()
+            self.visualizer = TrainingVisualizer(exp_dir=fold_dir)
         
             ## Create fresh model for each fold
             #self.model = copy.deepcopy(self.model)
