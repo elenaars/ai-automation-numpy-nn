@@ -78,7 +78,7 @@ class DataLoader:
 def generate_spiral_data(
     n_samples: int = 1500,
     n_classes: int = 3,
-    noise: float = 0.2,
+    class_sep: float = 0.2,
     random_state: int = None
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -98,36 +98,20 @@ def generate_spiral_data(
     if random_state is not None:
         np.random.seed(random_state)
 
+    X = np.zeros((n_samples, 2))  # Ensure 2D data
+    y = np.zeros(n_samples, dtype=int)
+    
     # Determine how many points per class. Drop any remainder.
-    n_points_per_class = n_samples // n_classes
+    samples_per_class = n_samples // n_classes
     #n_used = n_points_per_class * n_classes
 
-    x_list = []
-    y_list = []
-
     for class_idx in range(n_classes):
-        # r goes from 0.0 out to 1.0 (radial coordinate)
-        r = np.linspace(0.0, 1.0, n_points_per_class)
-        # theta sweeps out 4pi per class (so the spirals loop around twice),
-        # offset by class_idx*4 so each class has its own arm.
-        t = np.linspace(class_idx * 4.0, (class_idx + 1) * 4.0, n_points_per_class) 
-        # Add Gaussian “noise” to the angle t
-        t = t + np.random.randn(n_points_per_class) * noise
-
-        # Convert (r, t) to Cartesian coordinates
-        x1 = r * np.sin(t * np.pi / 2)  # optionally -- multiply t by pi/2 for a tighter spiral
-        x2 = r * np.cos(t * np.pi / 2)
-
-        # Stack into (n_points_per_class, 2)
-        x_class = np.column_stack([x1, x2])
-        y_class = np.full(n_points_per_class, class_idx, dtype=np.int64)
-
-        x_list.append(x_class)
-        y_list.append(y_class)
-
-    # Concatenate all classes
-    X = np.vstack(x_list)   # shape: (n_used, 2)
-    y = np.hstack(y_list)   # shape: (n_used,)
+        ix = range(samples_per_class * class_idx, samples_per_class * (class_idx + 1))
+        r = np.linspace(0.0, 1, samples_per_class)  # radius
+        t = np.linspace(class_idx * 4, (class_idx + 1) * 4, samples_per_class) + \
+            np.random.randn(samples_per_class) * 0.2 * class_sep
+        X[ix] = np.c_[r * np.sin(t * 2.5), r * np.cos(t * 2.5)]
+        y[ix] = class_idx
 
     return X, y
 
