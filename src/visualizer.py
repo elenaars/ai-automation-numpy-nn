@@ -15,7 +15,9 @@ class TrainingVisualizer:
     TrainingVisualizer class to store the training history and plot the loss and accuracy.
     It provides methods to update the training history and plot the loss and accuracy.
     '''
-    def __init__(self, exp_dir = 'plots')->None:
+    def __init__(self, exp_dir: str)->None:
+        self.exp_dir = exp_dir
+        os.makedirs(exp_dir, exist_ok=True)
         self.history = {
             'loss': [],
             'val_loss': [],
@@ -24,9 +26,6 @@ class TrainingVisualizer:
         }
         self.grid = None
         self.grid_coords = None
-        self.exp_dir = exp_dir
-        if not os.path.exists(exp_dir):
-            os.makedirs(exp_dir)
         
     def update(self, loss: float, val_loss: float, train_acc: float, val_acc: float):
         '''
@@ -72,6 +71,7 @@ class TrainingVisualizer:
         ax2.legend()
         
         filepath = os.path.join(self.exp_dir, filename)
+        plt.savefig(filepath)
         plt.close()
         print(f"Saved training plot to {filepath}")
            
@@ -81,8 +81,7 @@ class TrainingVisualizer:
         if x_train.shape[1] != 2:
             return
         
-        if ax is None:
-            fig, ax = plt.subplots(figsize=(8, 6))
+        fig, ax = plt.subplots(figsize=(8, 6))
         
         # Create grid first time only
         if self.grid is None:
@@ -118,22 +117,20 @@ class TrainingVisualizer:
                          s=20,
                          alpha=0.6,  # Some transparency
                          linewidth=0.5)
-    
-        if hasattr(ax, 'figure'):
-            ax.figure.colorbar(scatter, ax=ax, label='Class')
         
         ax.set_xlabel('X', fontsize=12)
         ax.set_ylabel('Y', fontsize=12)
         ax.set_title('Decision Boundary', fontsize=14, pad=10)
-    
+            
         # Make plot more aesthetic
         ax.grid(True, alpha=0.2)
-        plt.tight_layout()
-
+    
+        fig.colorbar(scatter, ax=ax, label='Class')
+        fig.tight_layout()
         filepath = os.path.join(self.exp_dir, filename)
-        plt.savefig(filepath)
-        plt.close()
+        fig.savefig(filepath)
         print(f"Saved decision boundary plot to {filepath}")
+        plt.close(fig)
         
     def weights_gradients_heatmap(self, model: Sequential, optimizer: Optimizer, ax: Optional[plt.Axes]=None, filename="weights_heatmap.png") -> None:
         '''
@@ -155,23 +152,11 @@ class TrainingVisualizer:
             return
         
         num_layers = len(linear_layers)
-    
-        # Create figure with subplots for each layer
-        if ax is None:
-            fig = plt.figure(figsize=(12, 4 * num_layers + 1))  # Add extra space for title
-            fig.patch.set_visible(False)
-            gs = fig.add_gridspec(num_layers, 2, hspace=0.6, height_ratios=[1]*num_layers)
-            axes = np.empty((num_layers, 2), dtype=object)
-            for i in range(num_layers):
-                axes[i, 0] = fig.add_subplot(gs[i, 0])
-                axes[i, 1] = fig.add_subplot(gs[i, 1])
-        else:
-            fig = ax.get_figure()
-            gs = GridSpecFromSubplotSpec(num_layers, 2, subplot_spec=ax.get_subplotspec(), hspace=0.6)
-            axes = np.empty((num_layers, 2), dtype=object)
-            for i in range(num_layers):
-                axes[i, 0] = fig.add_subplot(gs[i, 0])
-                axes[i, 1] = fig.add_subplot(gs[i, 1])
+
+        fig, axes = plt.subplots(num_layers, 2, figsize=(12, 4 * num_layers + 1))
+        
+        if num_layers == 1:
+            axes = axes.reshape(1, -1)
         
         for i, (layer_num, layer) in enumerate(linear_layers):
             # Left plot - weights
@@ -211,10 +196,10 @@ class TrainingVisualizer:
     
     
         
-    def plot_loss_landscape(self, model: Sequential, loader: DataLoader, loss_fn: Loss, ax: Optional[plt.Axes]=None, filename="loss_landscape.png")->None:
+    def plot_loss_landscape(self, model: Sequential, loader: DataLoader, loss_fn: Loss, filename="loss_landscape.png")->None:
         """Visualize loss landscape around current weights"""
-        if ax is None:
-            fig, ax = plt.subplots(figsize=(8, 6))
+        
+        fig = plt.figure(figsize=(8, 6))
         
         losses = []
         epsilons = np.linspace(-1, 1, 20)
@@ -243,18 +228,19 @@ class TrainingVisualizer:
             # Restore original weights
             for layer, (w, b) in zip([l for l in model.layers if isinstance(l, Linear)], 
                             original_weights):
-                layer.weights = w
-                layer.bias = b
+                layer.weights = w.copy()
+                layer.bias = b.copy()
     
-        ax.plot(epsilons, losses)
-        ax.set_xlabel('Perturbation magnitude')
-        ax.set_ylabel('Loss')
-        ax.set_title('Loss Landscape')
-        ax.grid(True)
+        plt.plot(epsilons, losses, 'b-', linewidth=2)
+        plt.xlabel('Perturbation magnitude')
+        plt.ylabel('Loss')
+        plt.title('Loss Landscape')
+        plt.grid(True, alpha = 0.3)
         
+        plt.tight_layout()
         filepath = os.path.join(self.exp_dir, filename)
-        plt.savefig(filepath)
-        plt.close()
+        fig.savefig(filepath)
+        plt.close(fig)
         print(f"Saved loss landscape plot to {filepath}")
 
         
@@ -262,7 +248,7 @@ class TrainingVisualizer:
 class KFoldVisualizer(TrainingVisualizer):
     """Extended visualizer for k-fold cross validation"""
     def __init__(self, k_folds: int, exp_dir='kfold_plots') -> None:
-        super().__init__()
+        super().__init__(exp_dir=exp_dir)
         self.k_folds = k_folds
         self.fold_histories = []
         self.exp_dir = exp_dir

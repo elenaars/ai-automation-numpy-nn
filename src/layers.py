@@ -170,3 +170,19 @@ class Sequential(Layer):
         print(f"Total parameters: {total_params}")
         print("-" * 50)
         print("-" * 50) 
+        
+    def save_architecture(self, file_path: str) -> None:
+        '''Save the model architecture to a file.'''
+        with open(file_path, 'w') as f:
+            f.write("Model Architecture:\n")
+            f.write("-" * 50 + "\n")
+            for i, layer in enumerate(self.layers):
+                if isinstance(layer, Linear):
+                    f.write(f"Layer {i}: {layer.__class__.__name__}, "
+                            f"Input: {layer.input_dim}, Output: {layer.output_dim}\n")
+                else:
+                    f.write(f"Layer {i}: {layer.__class__.__name__}\n")
+            f.write("-" * 50 + "\n")
+            f.write(f"Total parameters: {sum(np.prod(layer.weights.shape) + np.prod(layer.bias.shape) for layer in self.layers if isinstance(layer, Linear))}\n")
+            f.write("-" * 50 + "\n")
+        return

@@ -49,10 +49,10 @@ def main():
     parser.add_argument('--weight-decay', type=float, default=1e-4, help='Weight decay (L2 regularization)')
     parser.add_argument('--scheduler', type=str, default='warmup', choices=['none', 'warmup'], help='Learning rate scheduler type')
     parser.add_argument('--warmup-epochs', type=int, default=5, help='Number of warmup epochs for the scheduler')
-    parser.add_argument('--experiment-name', type=str, default='demo_run', help='Name of the experiment for logging')
     parser.add_argument('--hidden-dim', type=int, default=128, help='Hidden dimension for the model')
     parser.add_argument('--seed', type=int, default=None, help='Random seed for reproducibility')
-    parser.add_argument('--plots-dir', type=str, default='plots', help='Directory to save plots')
+    parser.add_argument('--experiment-name', type=str, default='demo_run',
+                       help='Name for the experiment (used for output organization)')
     args = parser.parse_args()
 
 
@@ -110,6 +110,28 @@ def main():
     
     print("Model architecture:")
     print(model.summary())
+    # save model architecture to a file
+    model.save_architecture(os.path.join(args.data_dir, "model_architecture.txt"))
+    print("Model architecture saved to model_architecture.txt")
+    # save experiment parameters to a file
+    with open(os.path.join(args.data_dir, "experiment_params.txt"), "w") as f:
+        f.write(f"Dataset: {args.dataset}\n")
+        f.write(f"Number of samples: {args.n_samples}\n")
+        f.write(f"Number of classes: {args.n_classes}\n")
+        f.write(f"Class separation: {args.class_sep}\n")
+        f.write(f"Data directory: {args.data_dir}\n")
+        f.write(f"Epochs: {args.epochs}\n")
+        f.write(f"Batch size: {args.batch_size}\n")
+        f.write(f"Learning rate: {args.lr}\n")
+        f.write(f"Momentum: {args.momentum}\n")
+        f.write(f"Weight decay: {args.weight_decay}\n")
+        f.write(f"Scheduler: {args.scheduler}\n")
+        f.write(f"Warmup epochs: {args.warmup_epochs}\n")
+        f.write(f"Experiment name: {args.experiment_name}\n")
+        f.write(f"Hidden dimension: {hidden_dim}\n")
+        if args.seed is not None:
+            f.write(f"Seed: {args.seed}\n")
+    print("Experiment parameters saved to experiment_params.txt")
 
     loss_fn = CrossEntropySoftMax()
     optimizer = SGD(learning_rate=args.lr)
@@ -126,11 +148,7 @@ def main():
     trainer = Trainer(model=model,
                       loss_fn=loss_fn,
                       optimizer=optimizer,
-                      plots_dir=args.plots_dir
-                      #experiment_name=args.experiment_name,
-                      #log_dir=os.path.join(args.data_dir, "logs"),
-                      #save_dir=os.path.join(args.data_dir, "models"),
-                      #seed=args.seed
+                      experiment_name=args.experiment_name
                       )
 
 

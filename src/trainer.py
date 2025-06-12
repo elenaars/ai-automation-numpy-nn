@@ -16,13 +16,18 @@ from .optimizers import SGD
 from .cross_validator import CrossValidator
 
 class Trainer:
-    def __init__(self, model: Sequential, loss_fn: Loss, optimizer: Optimizer, plots_dir = 'plots') -> None:
+    def __init__(self, model: Sequential, loss_fn: Loss, optimizer: Optimizer, experiment_name: str = 'default_exp') -> None:
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
-        self.plots_dir = plots_dir
-        os.makedirs(plots_dir, exist_ok=True)
-        self.visualizer = TrainingVisualizer(exp_dir=plots_dir)
+        
+         # Setup experiment directories
+        self.exp_dir = os.path.join('experiments', experiment_name)
+        self.plots_dir = os.path.join(self.exp_dir, 'plots')
+        os.makedirs(self.exp_dir, exist_ok=True)
+        os.makedirs(self.plots_dir, exist_ok=True)
+        
+       # self.visualizer = TrainingVisualizer(exp_dir=self.exp_dir)
 
     def train(self, train_loader: DataLoader, val_loader: DataLoader, epochs: int = 1000,  show_plots_logs:bool = True, log_interval:int = 200, patience: int = 20, min_delta: float = 1e-4, lr_scheduler: Optional[LRScheduler] = None, debug: bool = False, **kwargs) -> Dict[str, List[float]]:
         '''
@@ -191,35 +196,31 @@ class Trainer:
                 epoch_dir = os.path.join(self.visualizer.exp_dir, f'epoch_{epoch}')
                 os.makedirs(epoch_dir, exist_ok=True)
                 
-                # Create a figure with subplots for all visualizations
-                fig = plt.figure(figsize=(15, 12))
-                fig.set_facecolor('none')
-                gs = plt.GridSpec(3, 2, height_ratios=[1, 1, 1])
-            
-                # Decision boundary
-                ax1 = fig.add_subplot(gs[0, 0])
-                self.visualizer.plot_decision_boundary(self.model, train_loader.dataset.x, 
-                                                train_loader.dataset.y, ax=ax1)
-            
-                # Loss landscape
-                ax2 = fig.add_subplot(gs[0, 1])
-                self.visualizer.plot_loss_landscape(self.model, val_loader, 
-                                              self.loss_fn, ax=ax2)
-
-                # Weights and gradients heatmap
-                ax3 = fig.add_subplot(gs[1:, :])  # Use slice notation instead of tuple
-                self.visualizer.weights_gradients_heatmap(self.model, 
-                                        self.optimizer, 
-                                        ax=ax3)
-            
-            
-                plt.tight_layout()
-                
-                # Save the figure to a file
-                filepath = os.path.join(epoch_dir, "combined_visualization.png")
-                plt.savefig(filepath)
-                print(f"Saved visualization plot to {filepath}")
-                plt.close()               
+                # Save individual plots in epoch directory
+                self.visualizer.plot_decision_boundary(
+                    self.model, 
+                    train_loader.dataset.x, 
+                    train_loader.dataset.y,
+                    filename="decision_boundary.png"
+                    )
+        
+                self.visualizer.plot_loss_landscape(
+                    self.model,
+                    val_loader,
+                    self.loss_fn,
+                    filename="loss_landscape.png"
+                    )
+        
+                self.visualizer.weights_gradients_heatmap(
+                    self.model,
+                    self.optimizer,
+                    filename="weights_heatmap.png"
+                    )
+        
+                self.visualizer.plot_metrics_history(
+                    filename="metrics_history.png"
+                )
+                               
                     
                 # Print essential metrics
                 print(f"Epoch {epoch}: Loss={epoch_loss:.4f}, Val Loss={val_loss:.4f}, "
