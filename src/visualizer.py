@@ -274,37 +274,47 @@ class KFoldVisualizer(TrainingVisualizer):
     
     def plot_k_fold_results(self, filename="kfold_results.png")-> None:
         """Plot aggregated results across folds"""
+        
+        if not self.fold_histories:
+            print("No fold histories to plot")
+            return
+        
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+        
+        # Find the minimum length across all folds
+        min_epochs = min(len(hist['val_loss']) for hist in self.fold_histories)
+    
+        # Truncate all histories to the minimum length
+        val_losses = np.array([h['val_loss'][:min_epochs] for h in self.fold_histories])
+        val_accs = np.array([h['val_acc'][:min_epochs] for h in self.fold_histories])
+    
+        epochs = range(min_epochs)
         
         # Plot individual fold histories
         for i, hist in enumerate(self.fold_histories):
-            ax1.plot(hist['val_loss'], alpha=0.3, label=f'Fold {i+1}')
-            ax2.plot(hist['val_acc'], alpha=0.3)
+            ax1.plot(epochs,hist['val_loss'][:min_epochs], alpha=0.3, label=f'Fold {i+1}')
+            ax2.plot(epochs,hist['val_acc'][:min_epochs], alpha=0.3)
         
         # Plot mean ± std
-        val_losses = np.array([h['val_loss'] for h in self.fold_histories])
-        val_accs = np.array([h['val_acc'] for h in self.fold_histories])
-        
-        epochs = range(len(val_losses[0]))
         mean_loss = np.mean(val_losses, axis=0)
         std_loss = np.std(val_losses, axis=0)
         mean_acc = np.mean(val_accs, axis=0)
         std_acc = np.std(val_accs, axis=0)
-        
+    
         ax1.plot(epochs, mean_loss, 'r-', label='Mean Loss', linewidth=2)
         ax1.fill_between(epochs, mean_loss-std_loss, mean_loss+std_loss, alpha=0.2)
         ax1.set_title(f'Validation Loss Across {self.k_folds} Folds')
         ax1.set_xlabel('Epochs')
         ax1.set_ylabel('Loss')
         ax1.legend()
-        
+    
         ax2.plot(epochs, mean_acc, 'r-', label='Mean Accuracy', linewidth=2)
         ax2.fill_between(epochs, mean_acc-std_acc, mean_acc+std_acc, alpha=0.2)
         ax2.set_title(f'Validation Accuracy Across {self.k_folds} Folds')
         ax2.set_xlabel('Epochs')
         ax2.set_ylabel('Accuracy (%)')
         ax2.legend()
-        
+    
         filepath = os.path.join(self.exp_dir, filename)
         plt.tight_layout()
         plt.savefig(filepath)

@@ -197,3 +197,4 @@ cython_debug/
 # Data & experiments
 data/
 experiments/
+plots/

@@ -35,11 +35,11 @@ def main():
     #parse command line arguments
     parser = argparse.ArgumentParser(description="Train a neural network model.")
     parser.add_argument("--dataset", choices=["mnist", "digits", "synthetic"], default="mnist",  help='Dataset to use (mnist, digits, or synthetic: spirals)')
-    parser.add_argument("--n‐samples", type=int, default=1000,
+    parser.add_argument("--n-samples", type=int, default=1000,
                     help="Number of total points when using synthetic data")
-    parser.add_argument("--n‐classes", type=int, default=2,
+    parser.add_argument("--n-classes", type=int, default=2,
                     help="Number of classes for synthetic data")
-    parser.add_argument("--class‐sep", type=float, default=1.0,
+    parser.add_argument("--class-sep", type=float, default=1.0,
                     help="Cluster separation (for make_classification or similar)")
     parser.add_argument('--data-dir', type=str, default='data', help='Directory to save/load dataset')
     parser.add_argument('--epochs', type=int, default=20, help='Number of epochs to train')
@@ -87,7 +87,8 @@ def main():
 
     #convert label to one-hot encoding
     print("Converting labels to one-hot encoding...")
-    y = one_hot_encode(y, num_classes=5) if args.dataset == 'synthetic' else one_hot_encode(y)
+    y = one_hot_encode(y)
+    
     # divide dataset into train and test sets
     print("Splitting dataset into train and test sets...")
     train_dataset, test_dataset = DataLoader.holdout_split(Dataset(X, y), test_size=0.2, batch_size=args.batch_size)
