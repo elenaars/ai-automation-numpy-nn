@@ -149,7 +149,7 @@ def main():
         )
 
     # Create test loader and evaluate
-    test_acc = trainer.compute_accuracy(test_dataset)
+    test_acc = trainer.compute_accuracy(DataLoader(test_dataset))
     print(f"\nFinal Test Accuracy: {test_acc:.2f}%")
 
 if __name__ == "__main__":
