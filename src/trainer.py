@@ -16,13 +16,13 @@ from .optimizers import SGD
 from .cross_validator import CrossValidator
 
 class Trainer:
-    def __init__(self, model: Sequential, loss_fn: Loss, optimizer: Optimizer, experiment_name: str = 'default_exp') -> None:
+    def __init__(self, model: Sequential, loss_fn: Loss, optimizer: Optimizer, exp_dir: str) -> None:
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         
          # Setup experiment directories
-        self.exp_dir = os.path.join('experiments', experiment_name)
+        self.exp_dir = exp_dir
         self.plots_dir = os.path.join(self.exp_dir, 'plots')
         os.makedirs(self.exp_dir, exist_ok=True)
         os.makedirs(self.plots_dir, exist_ok=True)

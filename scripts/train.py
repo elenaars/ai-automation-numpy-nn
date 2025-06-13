@@ -110,11 +110,14 @@ def main():
     
     print("Model architecture:")
     print(model.summary())
+    
+    exp_dir = os.path.join('experiments', args.experiment_name)
+    
     # save model architecture to a file
-    model.save_architecture(os.path.join(args.data_dir, "model_architecture.txt"))
+    model.save_architecture(os.path.join(exp_dir, "model_architecture.txt"))
     print("Model architecture saved to model_architecture.txt")
     # save experiment parameters to a file
-    with open(os.path.join(args.data_dir, "experiment_params.txt"), "w") as f:
+    with open(os.path.join(exp_dir, "experiment_params.txt"), "w") as f:
         f.write(f"Dataset: {args.dataset}\n")
         f.write(f"Number of samples: {args.n_samples}\n")
         f.write(f"Number of classes: {args.n_classes}\n")
@@ -148,7 +151,7 @@ def main():
     trainer = Trainer(model=model,
                       loss_fn=loss_fn,
                       optimizer=optimizer,
-                      experiment_name=args.experiment_name
+                      exp_dir=exp_dir
                       )
 
 
