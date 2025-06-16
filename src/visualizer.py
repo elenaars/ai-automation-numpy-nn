@@ -43,7 +43,7 @@ class TrainingVisualizer:
         self.history['train_acc'].append(train_acc)
         self.history['val_acc'].append(val_acc)
 
-    def plot_metrics_history(self,  filename="metrics_history.png") -> None:
+    def plot_metrics_history(self,  filepath:str) -> None:
         '''
         Plot the training history.
         It plots the loss and accuracy for both training and validation sets.
@@ -70,13 +70,12 @@ class TrainingVisualizer:
         ax2.set_ylabel('Accuracy (%)')
         ax2.legend()
         
-        filepath = os.path.join(self.exp_dir, filename)
         plt.savefig(filepath)
         plt.close()
         print(f"Saved training plot to {filepath}")
            
     
-    def plot_decision_boundary(self, model: Sequential, x_train: np.ndarray, y_train: np.ndarray, ax: Optional[plt.Axes] = None, filename="decision_boundary.png") -> None:
+    def plot_decision_boundary(self, model: Sequential, x_train: np.ndarray, y_train: np.ndarray, filepath: str, ax: Optional[plt.Axes] = None) -> None:
         
         if x_train.shape[1] != 2:
             return
@@ -127,12 +126,11 @@ class TrainingVisualizer:
     
         fig.colorbar(scatter, ax=ax, label='Class')
         fig.tight_layout()
-        filepath = os.path.join(self.exp_dir, filename)
         fig.savefig(filepath)
         print(f"Saved decision boundary plot to {filepath}")
         plt.close(fig)
         
-    def weights_gradients_heatmap(self, model: Sequential, optimizer: Optimizer, ax: Optional[plt.Axes]=None, filename="weights_heatmap.png") -> None:
+    def weights_gradients_heatmap(self, model: Sequential, optimizer: Optimizer, filepath: str, ax: Optional[plt.Axes]=None) -> None:
         '''
         Plot the weights and their updates during training.
         Args:
@@ -185,8 +183,6 @@ class TrainingVisualizer:
                 ax.tick_params(axis='both', which='major', labelsize=8)
 
         plt.suptitle('Weight Values and Their Updates', y=1.02, fontsize=14)
-    
-        filepath = os.path.join(self.exp_dir, filename)
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust layout to prevent overlap
         plt.savefig(filepath)
         plt.close()
@@ -196,7 +192,7 @@ class TrainingVisualizer:
     
     
         
-    def plot_loss_landscape(self, model: Sequential, loader: DataLoader, loss_fn: Loss, filename="loss_landscape.png")->None:
+    def plot_loss_landscape(self, model: Sequential, loader: DataLoader, loss_fn: Loss, filepath:str)->None:
         """Visualize loss landscape around current weights"""
         
         fig = plt.figure(figsize=(8, 6))
@@ -238,7 +234,6 @@ class TrainingVisualizer:
         plt.grid(True, alpha = 0.3)
         
         plt.tight_layout()
-        filepath = os.path.join(self.exp_dir, filename)
         fig.savefig(filepath)
         plt.close(fig)
         print(f"Saved loss landscape plot to {filepath}")

@@ -196,31 +196,32 @@ class Trainer:
                 epoch_dir = os.path.join(self.visualizer.exp_dir, f'epoch_{epoch}')
                 os.makedirs(epoch_dir, exist_ok=True)
                 
-                # Save individual plots in epoch directory
+                # Save plots in epoch directory
                 self.visualizer.plot_decision_boundary(
                     self.model, 
                     train_loader.dataset.x, 
                     train_loader.dataset.y,
-                    filename="decision_boundary.png"
+                    filepath=os.path.join(epoch_dir, "decision_boundary.png")
                     )
         
                 self.visualizer.plot_loss_landscape(
                     self.model,
                     val_loader,
                     self.loss_fn,
-                    filename="loss_landscape.png"
+                    filepath=os.path.join(epoch_dir,"loss_landscape.png")
                     )
         
                 self.visualizer.weights_gradients_heatmap(
                     self.model,
                     self.optimizer,
-                    filename="weights_heatmap.png"
+                    filepath=os.path.join(epoch_dir,"weights_heatmap.png")
                     )
         
                 self.visualizer.plot_metrics_history(
-                    filename="metrics_history.png"
+                    filepath=os.path.join(epoch_dir, "metrics_history.png")
                 )
-                               
+                 
+                print(f"Saved plots for epoch {epoch} in {epoch_dir}")               
                     
                 # Print essential metrics
                 print(f"Epoch {epoch}: Loss={epoch_loss:.4f}, Val Loss={val_loss:.4f}, "
@@ -229,8 +230,10 @@ class Trainer:
             
                 
                 
-        # Plot the metrics history during training
-        self.visualizer.plot_metrics_history()
+        # Save final metrics history plot
+        final_metrics_path = os.path.join(self.visualizer.exp_dir, "final_metrics_history.png")
+        self.visualizer.plot_metrics_history(filepath=final_metrics_path)
+        
         return self.visualizer.history
                 
     def validate(self, val_loader: DataLoader) -> float:

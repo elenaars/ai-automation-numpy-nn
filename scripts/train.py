@@ -114,7 +114,11 @@ def main():
     exp_dir = os.path.join('experiments', args.experiment_name)
     
     # save model architecture to a file
-    model.save_architecture(os.path.join(exp_dir, "model_architecture.txt"))
+    #create experiment directory if it doesn't exist
+    os.makedirs(exp_dir, exist_ok=True)
+    arch_file = os.path.join(exp_dir, "model_architecture.txt")
+        
+    model.save_architecture(arch_file)
     print("Model architecture saved to model_architecture.txt")
     # save experiment parameters to a file
     with open(os.path.join(exp_dir, "experiment_params.txt"), "w") as f:
