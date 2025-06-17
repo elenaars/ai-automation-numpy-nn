@@ -19,6 +19,7 @@
 
 import argparse
 import os
+import time
 import numpy as np
 from src.data_utils import *
 from src.layers import Sequential, Linear, ReLU
@@ -29,6 +30,26 @@ from src.trainer import Trainer
 from src.cross_validator import CrossValidator
 from src.utils import one_hot_encode
 
+
+def setup_experiment_dir(experiment_name: str) -> str:
+    """
+    Set up clean experiment directory with sync
+    """
+    exp_dir = os.path.join('experiments', experiment_name)
+    if os.path.exists(exp_dir):
+        print(f"Removing existing experiment directory: {exp_dir}")
+        for root, dirs, files in os.walk(exp_dir, topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
+        os.rmdir(exp_dir)
+        # Wait for filesystem to catch up
+        time.sleep(0.1)
+        
+    os.makedirs(exp_dir)
+    os.sync()
+    return exp_dir
 
 def main():
     
@@ -49,7 +70,8 @@ def main():
     parser.add_argument('--weight-decay', type=float, default=1e-4, help='Weight decay (L2 regularization)')
     parser.add_argument('--scheduler', type=str, default='warmup', choices=['none', 'warmup'], help='Learning rate scheduler type')
     parser.add_argument('--warmup-epochs', type=int, default=5, help='Number of warmup epochs for the scheduler')
-    parser.add_argument('--hidden-dim', type=int, default=128, help='Hidden dimension for the model')
+    parser.add_argument('--hidden-dims', type=str, default='128',
+                       help='Comma-separated list of hidden layer dimensions (e.g., 256,128,64)')
     parser.add_argument('--seed', type=int, default=None, help='Random seed for reproducibility')
     parser.add_argument('--experiment-name', type=str, default='demo_run',
                        help='Name for the experiment (used for output organization)')
@@ -97,21 +119,41 @@ def main():
     # Create model, loss function, optimizer, and trainer
     
     input_dim = X.shape[1]
-    hidden_dim  = args.hidden_dim or 128
+    hidden_dims  = [int(dim) for dim in args.hidden_dims.split(',')] or [128]  # Default to 128 if not specified
     num_classes = y.shape[1]
     
-    print(f"Input dimension: {input_dim}, Hidden dimension: {hidden_dim}, Number of classes: {num_classes}")
+    #print(f"Input dimension: {input_dim}, Hidden dimension: {hidden_dim}, Number of classes: {num_classes}")
     
-    model = Sequential([
-    Linear(input_dim,  hidden_dim),
-    ReLU(),
-    Linear(hidden_dim, num_classes),
-    ])
+    # Create model architecture dynamically
+    initial_architecture = []
+    prev_dim = input_dim
+    
+    for hidden_dim in hidden_dims:
+        initial_architecture.extend([
+            (Linear, prev_dim, hidden_dim),
+            ReLU
+        ])
+        prev_dim = hidden_dim
+        
+    # Add final layer
+    initial_architecture.append((Linear, prev_dim, num_classes))
+    
+    # Create layers from architecture specification
+    layers = []
+    for layer_info in initial_architecture:
+        if isinstance(layer_info, tuple):
+            cls, in_dim, out_dim = layer_info
+            layers.append(cls(in_dim, out_dim))
+        else:
+            layers.append(layer_info())
+
+    # Initialize model with list of layers
+    model = Sequential(layers)  # Pass the list directly, not unpacked
     
     print("Model architecture:")
     print(model.summary())
     
-    exp_dir = os.path.join('experiments', args.experiment_name)
+    exp_dir = setup_experiment_dir(args.experiment_name)
     
     # save model architecture to a file
     #create experiment directory if it doesn't exist
@@ -135,7 +177,7 @@ def main():
         f.write(f"Scheduler: {args.scheduler}\n")
         f.write(f"Warmup epochs: {args.warmup_epochs}\n")
         f.write(f"Experiment name: {args.experiment_name}\n")
-        f.write(f"Hidden dimension: {hidden_dim}\n")
+        f.write(f"Hidden dimensions: {hidden_dims}\n")
         if args.seed is not None:
             f.write(f"Seed: {args.seed}\n")
     print("Experiment parameters saved to experiment_params.txt")

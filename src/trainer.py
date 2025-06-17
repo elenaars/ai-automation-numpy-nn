@@ -195,6 +195,7 @@ class Trainer:
                 
                 epoch_dir = os.path.join(self.visualizer.exp_dir, f'epoch_{epoch}')
                 os.makedirs(epoch_dir, exist_ok=True)
+                os.sync()
                 
                 # Save plots in epoch directory
                 self.visualizer.plot_decision_boundary(
