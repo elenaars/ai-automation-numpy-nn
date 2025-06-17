@@ -78,6 +78,7 @@ def main():
     parser.add_argument('--seed', type=int, default=None, help='Random seed for reproducibility')
     parser.add_argument('--experiment-name', type=str, default='demo_run',
                        help='Name for the experiment (used for output organization)')
+    parser.add_argument('--log-interval', type=int, default=100, help='Interval for logging training progress')
     args = parser.parse_args()
 
 
@@ -181,6 +182,7 @@ def main():
         f.write(f"Warmup epochs: {args.warmup_epochs}\n")
         f.write(f"Experiment name: {args.experiment_name}\n")
         f.write(f"Hidden dimensions: {hidden_dims}\n")
+        f.write(f"log interval: {args.log_interval}\n")
         if args.seed is not None:
             f.write(f"Seed: {args.seed}\n")
     print("Experiment parameters saved to experiment_params.txt")
@@ -216,12 +218,12 @@ def main():
         debug=False,
         epochs=args.epochs,
         patience=150,
-        log_interval=100,
         batch_size=args.batch_size,
         show_plots_logs=True,
         lr_scheduler=lr_scheduler,
         weight_decay=args.weight_decay,
-        momentum=args.momentum
+        momentum=args.momentum,
+        log_interval=args.log_interval,
         )
 
     # Create test loader and evaluate
