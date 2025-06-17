@@ -3,17 +3,20 @@
 # IN PROGRESS
 
 # Sample usage: 
-#python scripts/train.py \
-#  --dataset mnist \
-#  --data-dir data/mnist \
-#  --epochs 20 \
-#  --batch-size 64 \
-#  --lr 0.01 \
-#  --momentum 0.9 \
-#  --weight-decay 1e-4 \
-#  --scheduler warmup \
-#  --warmup-epochs 5 \
-#  --experiment-name demo_run
+# python -m scripts.train 
+# --dataset synthetic 
+# --n-samples 2000 
+# --n-classes 3 
+# --class-sep 1.5 
+# --lr 0.01 
+# --hidden-dims 256,128,64 
+# --experiment-name spiral_3 
+# --epochs 1000 
+# --batch-size 32 
+# --momentum 0.9 
+# --weight-decay 1e-5 
+# --scheduler cosine 
+# --warmup-epochs 20
 
 
 
@@ -25,7 +28,7 @@ from src.data_utils import *
 from src.layers import Sequential, Linear, ReLU
 from src.losses import CrossEntropySoftMax
 from src.optimizers import SGD 
-from src.schedulers import WarmupLRScheduler, ExponentialLRScheduler
+from src.schedulers import WarmupLRScheduler, ExponentialLRScheduler, CosineAnnealingLRScheduler
 from src.trainer import Trainer
 from src.cross_validator import CrossValidator
 from src.utils import one_hot_encode
@@ -68,7 +71,7 @@ def main():
     parser.add_argument('--lr', type=float, default=0.01, help='Learning rate for the optimizer')
     parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for the optimizer')
     parser.add_argument('--weight-decay', type=float, default=1e-4, help='Weight decay (L2 regularization)')
-    parser.add_argument('--scheduler', type=str, default='warmup', choices=['none', 'warmup'], help='Learning rate scheduler type')
+    parser.add_argument('--scheduler', type=str, default='warmup', choices=['none', 'warmup','cosine'], help='Learning rate scheduler type')
     parser.add_argument('--warmup-epochs', type=int, default=5, help='Number of warmup epochs for the scheduler')
     parser.add_argument('--hidden-dims', type=str, default='128',
                        help='Comma-separated list of hidden layer dimensions (e.g., 256,128,64)')
@@ -191,6 +194,12 @@ def main():
     elif args.scheduler == "exp":
         lr_scheduler = ExponentialLRScheduler(initial_lr=args.lr,
                                           gamma=args.gamma)
+    elif args.scheduler == "cosine":
+        lr_scheduler = CosineAnnealingLRScheduler(initial_lr=args.lr,
+                                                  T_max=args.epochs,
+                                                  eta_min=1e-6,
+                                                  warmup_epochs=args.warmup_epochs,
+                                                  warmup_start_lr=0.0001)
     else:
         lr_scheduler = None
         

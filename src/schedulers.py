@@ -52,3 +52,25 @@ class WarmupLRScheduler(LRScheduler):
         if self.current_step < self.warmup_epochs:
             return self.initial_lr * (self.current_step / self.warmup_epochs)
         return self.initial_lr * 0.5 * (1 + np.cos(np.pi * (self.current_step - self.warmup_epochs) / (1000 - self.warmup_epochs)))
+    
+class CosineAnnealingLRScheduler(LRScheduler):
+    """Cosine annealing scheduler with optional warmup and restarts"""
+    def __init__(self, initial_lr: float, T_max: int = 1000, eta_min: float = 0.0, warmup_epochs: int = 0, warmup_start_lr: float = 0.0001) -> None:
+        super().__init__(initial_lr)
+        self.T_max = T_max
+        self.eta_min = eta_min
+        self.warmup_epochs = warmup_epochs
+        self.warmup_start_lr = warmup_start_lr
+        
+    def get_lr(self) -> float:
+        # Warmup phase
+        if self.current_step < self.warmup_epochs:
+            return self.warmup_start_lr + (self.initial_lr - self.warmup_start_lr) * \
+                   (self.current_step / self.warmup_epochs)
+        
+        # Cosine annealing phase
+        progress = (self.current_step - self.warmup_epochs) / (self.T_max - self.warmup_epochs)
+        progress = min(1.0, progress)  # Clip progress to [0, 1]
+        
+        return self.eta_min + (self.initial_lr - self.eta_min) * \
+               (1 + np.cos(np.pi * progress)) / 2
