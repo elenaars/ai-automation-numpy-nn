@@ -1,7 +1,10 @@
 from typing import Tuple, Optional, Union
+import os
 
 import numpy as np
 from sklearn.datasets import fetch_openml
+from sklearn.preprocessing import StandardScaler
+
 
 
 
@@ -115,55 +118,67 @@ def generate_spiral_data(
 
     return X, y
 
-#download and return mnist dataset
-def download_mnist_data() -> Tuple[np.ndarray, np.ndarray]:
-    '''
-    Download the MNIST dataset and return the training and test data.
-    return: tuple (X, y_one_hot)
-    X: 2D array of shape (n_samples, 2) with the data points
-    y_one_hot: 2D array of shape (n_samples, n_classes) with one-hot encoded labels
-    '''
-    mnist = fetch_openml('mnist_784', version=1)
-    X = mnist.data.values.astype(np.float32) / 255.0  # Normalize to [0, 1]
-    y = mnist.target.astype(np.int64)
-    return X, y
 
-#download and return fashion mnist dataset
-def download_fashion_mnist_data() -> Tuple[np.ndarray, np.ndarray]:
-    '''
-    Download the Fashion MNIST dataset and return the training and test data.
-    return: tuple (X, y_one_hot)
-    X: 2D array of shape (n_samples, 2) with the data points
-    y_one_hot: 2D array of shape (n_samples, n_classes) with one-hot encoded labels
-    '''
-    fashion_mnist = fetch_openml('Fashion-MNIST', version=1)
-    X = fashion_mnist.data.values.astype(np.float32) / 255.0  # Normalize to [0, 1]
-    y = fashion_mnist.target.astype(np.int64)
+def normalize_features(X: np.ndarray, dataset_name: str) -> np.ndarray:
+    """Normalize features based on dataset characteristics."""
+    if dataset_name in ['mnist', 'fashion_mnist']:
+        # These datasets are already normalized to [0,1] by division by 255
+        return X / 255.0 if X.max() > 1.0 else X
+    
+    elif dataset_name in ['digits', 'iris']:
+        # Use StandardScaler for these datasets
+        scaler = StandardScaler()
+        return scaler.fit_transform(X)
+    
+    else:
+        # For synthetic data or unknown datasets, use min-max normalization
+        return (X - X.min()) / (X.max() - X.min())
+    
+def load_openml_dataset(dataset_name: str, data_dir: str = './data') -> Tuple[np.ndarray, np.ndarray]:
+    """Generic function to load and cache OpenML datasets with proper normalization.
+        Args:
+            dataset_name: Name of the dataset ('mnist', 'fashion-mnist', 'iris')
+            data_dir: Directory to store cached datasets
+    
+        Returns:
+            Tuple of (X, y) arrays
+    """
+        
+    # Mapping of friendly names to OpenML identifiers
+    dataset_mapping = {
+        'mnist': 'mnist_784',
+        'fashion_mnist': 'Fashion-MNIST',
+        'digits': 'mnist_784',
+        'iris': 'iris'
+    }
+    
+    if dataset_name not in dataset_mapping:
+        raise ValueError(f"Unknown dataset: {dataset_name}. Choose from {list(dataset_mapping.keys())}")
+    
+    # Check if cached files exist
+    cache_file = os.path.join(data_dir, f'{dataset_name}.npz')
+    
+    if os.path.exists(cache_file):
+        print(f"Loading {dataset_name} from cache...")
+        with np.load(cache_file) as data:
+            return data['X'], data['y']
+    
+    print(f"Downloading {dataset_name} dataset...")
+    dataset = fetch_openml(dataset_mapping[dataset_name], version=1)
+    
+    # Handle different return formats from fetch_openml
+    X = dataset.data.values if hasattr(dataset.data, 'values') else dataset.data
+    X = X.astype(np.float32)
+    y = dataset.target.astype(np.int64)
+    
+    # Create data directory if it doesn't exist
+    os.makedirs(data_dir, exist_ok=True)
+    
+    X = normalize_features(X, dataset_name)
+    
+    # Save to cache
+    print(f"Saving {dataset_name} to cache...")
+    np.savez_compressed(cache_file, X=X, y=y)
+    
     return X, y
-
-#download and return digits dataset
-def download_digits_data() -> Tuple[np.ndarray, np.ndarray]:
-    '''
-    Download the Digits dataset and return the training and test data.
-    return: tuple (X, y_one_hot)
-    X: 2D array of shape (n_samples, 2) with the data points
-    y_one_hot: 2D array of shape (n_samples, n_classes) with one-hot encoded labels
-    '''
-    digits = fetch_openml('mnist_784', version=1)
-    X = digits.data.values.astype(np.float32) / 255.0  # Normalize to [0, 1]
-    y = digits.target.astype(np.int64)
-    return X, y
-
-#download and return iris dataset
-def download_iris_data() -> Tuple[np.ndarray, np.ndarray]:
-    '''
-    Download the Iris dataset and return the data and labels.
-    return: tuple (X, y_one_hot)
-    X: 2D array of shape (n_samples, n_features) with the data points
-    y_one_hot: 2D array of shape (n_samples, n_classes) with one-hot encoded labels
-    '''
-    iris = fetch_openml('iris', version=1)
-    X = iris.data.values.astype(np.float32)
-    y = iris.target.astype(np.int64)
-    return X, y
- 
+            

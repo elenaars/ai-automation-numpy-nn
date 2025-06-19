@@ -50,7 +50,15 @@ class TrainingVisualizer:
         Returns:
             None
         '''
+        
         assert len(self.history['loss']) > 0, "No training history to plot."
+        
+        
+        # Skip plotting if we are around epoch 0 with almost no history
+        if len(self.history['loss']) <= 2:
+            return
+        
+
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
         
         epochs = range(len(self.history['loss']))

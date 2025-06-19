@@ -218,9 +218,9 @@ class Trainer:
                     filepath=os.path.join(epoch_dir,"weights_heatmap.png")
                     )
         
-                self.visualizer.plot_metrics_history(
-                    filepath=os.path.join(epoch_dir, "metrics_history.png")
-                )
+                #self.visualizer.plot_metrics_history(
+                #    filepath=os.path.join(epoch_dir, "metrics_history.png")
+                #)
                  
                 print(f"Saved plots for epoch {epoch} in {epoch_dir}")               
                     

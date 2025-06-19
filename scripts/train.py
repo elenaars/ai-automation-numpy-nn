@@ -86,30 +86,17 @@ def main():
         np.random.seed(args.seed)
         print(f"Using seed: {args.seed}")
 
+    data_dir = args.data_dir if args.data_dir else './data'
+
     # download / generate dataset depending on many options
-    match args.dataset:
-        case 'synthetic':
+    if args.dataset == 'synthetic':
             # Generate synthetic spiral dataset
             print("Generating spiral dataset...")
             X, y = generate_spiral_data(args.n_samples, args.n_classes, args.class_sep, args.seed)    
-        case 'mnist':
-            # Load MNIST dataset
-            print("Loading MNIST dataset...")
-            X, y = download_mnist_data()
-        case 'digits':
-            # Load Digits dataset
-            print("Loading Digits dataset...")
-            X, y = download_digits_data()
-        case 'fashion_mnist':
-            # Load Fashion MNIST dataset
-            print("Loading Fashion MNIST dataset...")
-            X, y = download_fashion_mnist_data()
-        case 'iris':
-            # Load Iris dataset
-            print("Loading Iris dataset...")
-            X, y = download_iris_data()
-        case _:
-            raise ValueError(f"Unknown dataset: {args.dataset}")
+    else:
+        # Load dataset from data_utils
+        print(f"Loading {args.dataset} dataset...")
+        X, y = load_openml_dataset(args.dataset, data_dir)
 
     #convert label to one-hot encoding
     print("Converting labels to one-hot encoding...")
