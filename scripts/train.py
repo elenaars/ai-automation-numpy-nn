@@ -1,24 +1,5 @@
 # script that takes all the necessary arguments from the user and trains the model
 
-# IN PROGRESS
-
-# Sample usage: 
-# python -m scripts.train 
-# --dataset synthetic 
-# --n-samples 2000 
-# --n-classes 3 
-# --class-sep 1.5 
-# --lr 0.01 
-# --hidden-dims 256,128,64 
-# --experiment-name spiral_3 
-# --epochs 1000 
-# --batch-size 32 
-# --momentum 0.9 
-# --weight-decay 1e-5 
-# --scheduler cosine 
-# --warmup-epochs 20
-
-
 
 import argparse
 import os
