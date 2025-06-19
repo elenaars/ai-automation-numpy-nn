@@ -47,6 +47,7 @@ def main():
     parser.add_argument("--class-sep", type=float, default=1.0,
                     help="Cluster separation (for make_classification or similar)")
     parser.add_argument('--data-dir', type=str, default='data', help='Directory to save/load dataset')
+    parser.add_argument('--n-folds', type=int, default=5, help='Number of folds for cross-validation')
     parser.add_argument('--epochs', type=int, default=20, help='Number of epochs to train')
     parser.add_argument('--batch-size', type=int, default=64, help='Batch size for training')
     parser.add_argument('--lr', type=float, default=0.01, help='Learning rate for the optimizer')
@@ -141,6 +142,7 @@ def main():
         f.write(f"Number of classes: {args.n_classes}\n")
         f.write(f"Class separation: {args.class_sep}\n")
         f.write(f"Data directory: {args.data_dir}\n")
+        f.write(f"Number of folds: {args.n_folds}\n")
         f.write(f"Epochs: {args.epochs}\n")
         f.write(f"Batch size: {args.batch_size}\n")
         f.write(f"Learning rate: {args.lr}\n")
@@ -182,7 +184,7 @@ def main():
 
     trainer.train_with_cv(
         train_dataset, 
-        cv=CrossValidator("k-fold", k=5),
+        cv=CrossValidator(k=args.n_folds, random_state=args.seed),
         debug=False,
         epochs=args.epochs,
         patience=150,
