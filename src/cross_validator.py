@@ -17,6 +17,9 @@ class CrossValidator:
         random_state: Random seed for reproducibility (default: 42)
     """
     def __init__(self, k: int = 5, random_state: int = 42) -> None:
+        if k < 2 or k > len(Dataset):
+            raise ValueError(f"Number of folds k must be at least 2 and not greater than \
+                             the length of the dataset. Provided: {k}, Dataset length: {len(Dataset)}")
         self.k = k
         self.random_state = np.random.RandomState(random_state)
 
