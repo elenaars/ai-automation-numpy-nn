@@ -1,3 +1,13 @@
+"""
+Utility functions for loading and processing datasets.
+This module provides functions to load datasets from OpenML, generate synthetic datasets,
+and normalize features. 
+
+It also includes Dataset and DataLoader classes for handling data
+and batching.
+"""
+
+
 from typing import Tuple, Optional, Union
 import os
 
@@ -5,15 +15,12 @@ import numpy as np
 from sklearn.datasets import fetch_openml
 from sklearn.preprocessing import StandardScaler
 
-
-
-
 # Dataset and DataLoader classes to wrap the data and operate on batches
 class Dataset:
-    '''
+    """
     Dataset class to hold the data and labels.
     It provides methods to access the data and labels by index.
-    '''
+    """
     def __init__(self, x: np.ndarray, y: np.ndarray)-> None:
         self.x = x
         self.y = y
@@ -26,10 +33,10 @@ class Dataset:
         return self.x[index], self.y[index]
     
 class DataLoader:
-    '''
+    """   
     DataLoader class to load the data in batches.
     It provides methods to iterate over the data in batches.
-    '''
+    """
     def __init__(self, dataset: Dataset, indices: Optional[np.ndarray] = None, batch_size: int = 32, shuffle: bool = False) -> None:
         self.dataset = dataset
         self.batch_size = batch_size
@@ -57,26 +64,23 @@ class DataLoader:
         return int(np.ceil(len(self.indices) / self.batch_size))
     
     @staticmethod
-    def holdout_split(dataset: Dataset, test_size: float = 0.2, batch_size: int = 32) -> Tuple['Dataset', 'Dataset']:
+    def holdout_split(dataset: Dataset, test_size: float = 0.2, random_state: int = 42) -> Tuple['Dataset', 'Dataset']:
         """
         Splits the dataset into training and testing sets.
         Args:
             dataset (Dataset): The dataset to split.
             test_size (float): The proportion of the dataset to include in the test split.
         Returns:
-            DataLoader: Loader for the training portion of the dataset.
-            DataLoader: Loader for the testing portion of the dataset.
+            Tuple[Dataset, Dataset]: Training and testing datasets.
         """
         assert 0 < test_size < 1, "test_size must be between 0 and 1."
         indices = np.arange(len(dataset))
-        np.random.shuffle(indices)
+        np.random.RandomState(random_state).shuffle(indices)
         split_index = int(len(dataset) * (1 - test_size))
         train_indices = indices[:split_index]
         test_indices = indices[split_index:]
-        #return DataLoader(dataset, train_indices, batch_size=batch_size, shuffle = True), DataLoader(dataset, test_indices, batch_size=batch_size, shuffle = False)
         return Dataset(dataset.x[train_indices], dataset.y[train_indices]), Dataset(dataset.x[test_indices], dataset.y[test_indices]) 
    
-# function to generate synthetic dataset - spiral.
 
 def generate_spiral_data(
     n_samples: int = 1500,
@@ -104,13 +108,13 @@ def generate_spiral_data(
     X = np.zeros((n_samples, 2))  # Ensure 2D data
     y = np.zeros(n_samples, dtype=int)
     
-    # Determine how many points per class. Drop any remainder.
+    # Determine how many points per class. Drop any remainder, 
+    # so that we use exactly n_used = n_points_per_class * n_classes points.
     samples_per_class = n_samples // n_classes
-    #n_used = n_points_per_class * n_classes
 
     for class_idx in range(n_classes):
         ix = range(samples_per_class * class_idx, samples_per_class * (class_idx + 1))
-        r = np.linspace(0.0, 1, samples_per_class)  # radius
+        r = np.linspace(0.0, 1, samples_per_class) 
         t = np.linspace(class_idx * 4, (class_idx + 1) * 4, samples_per_class) + \
             np.random.randn(samples_per_class) * 0.2 * class_sep
         X[ix] = np.c_[r * np.sin(t * 2.5), r * np.cos(t * 2.5)]
@@ -120,7 +124,19 @@ def generate_spiral_data(
 
 
 def normalize_features(X: np.ndarray, dataset_name: str) -> np.ndarray:
-    """Normalize features based on dataset characteristics."""
+    """
+    Normalize features based on dataset characteristics. 
+    If the dataset is MNIST or Fashion-MNIST, it normalizes to [0, 1].
+    For Digits and Iris datasets, it uses StandardScaler.
+    For synthetic or unknown datasets, it applies min-max normalization.
+    
+    Args:        
+        X: Feature matrix (numpy array)
+        dataset_name: Name of the dataset ('mnist', 'fashion_mnist', 'digits', 'iris')      
+    Returns:
+        Normalized feature matrix
+    """
+    
     if dataset_name in ['mnist', 'fashion_mnist']:
         # These datasets are already normalized to [0,1] by division by 255
         return X / 255.0 if X.max() > 1.0 else X
@@ -148,7 +164,7 @@ def load_openml_dataset(dataset_name: str, data_dir: str = './data') -> Tuple[np
     dataset_mapping = {
         'mnist': 'mnist_784',
         'fashion_mnist': 'Fashion-MNIST',
-        'digits': 'mnist_784',
+        'digits': 'digits',
         'iris': 'iris'
     }
     
@@ -159,9 +175,13 @@ def load_openml_dataset(dataset_name: str, data_dir: str = './data') -> Tuple[np
     cache_file = os.path.join(data_dir, f'{dataset_name}.npz')
     
     if os.path.exists(cache_file):
-        print(f"Loading {dataset_name} from cache...")
-        with np.load(cache_file) as data:
-            return data['X'], data['y']
+        try:
+            print(f"Loading {dataset_name} from cache...")
+            with np.load(cache_file) as data:
+                return data['X'], data['y']
+        except Exception as e:
+            print(f"Cache loading failed: {e}. Removing corrupted cache and re-downloading...")
+            os.remove(cache_file)
     
     print(f"Downloading {dataset_name} dataset...")
     dataset = fetch_openml(dataset_mapping[dataset_name], version=1)
