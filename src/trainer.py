@@ -1,4 +1,8 @@
-# class Trainer that governs the training process, using the DataLoader, ValidationStrategy, and Optimizer
+"""
+This module defines the Trainer class, which is responsible for training a machine learning model.
+It includes methods for training with validation, computing accuracy, and performing k-fold cross-validation.
+It also provides functionality for visualizing training metrics and decision boundaries.
+"""
 
 import os
 import numpy as np
@@ -27,10 +31,9 @@ class Trainer:
         os.makedirs(self.exp_dir, exist_ok=True)
         os.makedirs(self.plots_dir, exist_ok=True)
         
-       # self.visualizer = TrainingVisualizer(exp_dir=self.exp_dir)
-
+        
     def train(self, train_loader: DataLoader, val_loader: DataLoader, epochs: int = 1000,  show_plots_logs:bool = True, log_interval:int = 200, patience: int = 20, min_delta: float = 1e-4, lr_scheduler: Optional[LRScheduler] = None, debug: bool = False, **kwargs) -> Dict[str, List[float]]:
-        '''
+        """
         Train the model using the specified loss function and optimizer.
         The training loop consists of the following steps:
         1. Split the dataset into training and validation sets.
@@ -55,7 +58,7 @@ class Trainer:
             **kwargs: Additional arguments (e.g., batch_size)
         Returns:
             dict: Training history containing loss, validation loss, training accuracy, and validation accuracy.
-        '''
+        """
         
         if debug:
             stats = {}
@@ -307,14 +310,7 @@ class Trainer:
         # Create fresh learning rate scheduler for each fold with same parameters
         lr_params = {'initial_lr': kwargs.get('lr_scheduler').initial_lr, 
                      'warmup_epochs': kwargs.get('lr_scheduler').warmup_epochs}
-        
-        #if lr_scheduler is None:
-        #    lr_scheduler = ExponentialLRScheduler(initial_lr=0.01, gamma=0.999)
-        #kwargs['lr_scheduler'] = lr_scheduler
-        
-
-        # Set consistent batch size
-        #kwargs['batch_size'] = min(32, len(dataset) // 10)  # Smaller batches for stability
+       
 
         # Get the scheduler class and its parameters from the provided scheduler
         scheduler_class = type(kwargs['lr_scheduler'])
@@ -331,13 +327,9 @@ class Trainer:
             
             # Reset visualization history for each fold
             self.visualizer = TrainingVisualizer(exp_dir=fold_dir)
-        
-            ## Create fresh model for each fold
-            #self.model = copy.deepcopy(self.model)
             
-            np.random.seed(42 + fold_idx)  # Consistent but different for each fold
-            
-            # Create fresh model with consistent initialization        
+            # Create fresh model with consistent initialization
+            np.random.seed(42 + fold_idx)  # Consistent but different for each fold        
             layers = []
             for layer_info in initial_architecture:
                 if isinstance(layer_info, tuple):
@@ -353,8 +345,8 @@ class Trainer:
             # Create fresh optimizer
             self.optimizer = SGD(learning_rate=lr_params['initial_lr'])
 
-            # Then, for each fold:
-            kwargs['lr_scheduler'] = scheduler_class(**scheduler_params)# Create fresh loss function        
+            # Create fresh learning rate scheduler
+            lr_scheduler = scheduler_class(**scheduler_params)        
         
              # Create data loaders with consistent batch size
             train_loader = DataLoader(dataset, indices=train_idx, 
@@ -365,12 +357,11 @@ class Trainer:
         
         
             # Train this fold
-            kwargs['show_plots'] = False  # Disable per-fold plots
-           # train_loader = DataLoader(dataset, indices=train_idx)
-           # val_loader = DataLoader(dataset, indices=val_idx)
         
+            kwargs.pop('lr_scheduler', None)  # Remove scheduler from kwargs to avoid passing it to train method
+            
             # Regular training but store history
-            history = self.train(train_loader, val_loader, **kwargs)
+            history = self.train(train_loader, val_loader, lr_scheduler=lr_scheduler, **kwargs)
             cv_visualizer.add_fold_history(history)
             
             # Add loss landscape visualization after training each fold
