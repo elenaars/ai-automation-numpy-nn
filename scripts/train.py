@@ -55,6 +55,7 @@ def main():
     parser.add_argument('--weight-decay', type=float, default=1e-4, help='Weight decay (L2 regularization)')
     parser.add_argument('--scheduler', type=str, default='warmup', choices=['none', 'warmup','cosine'], help='Learning rate scheduler type')
     parser.add_argument('--warmup-epochs', type=int, default=5, help='Number of warmup epochs for the scheduler')
+    parser.add_argument('--eta-min', type=float, default=1e-6, help='Minimum learning rate for cosine annealing')
     parser.add_argument('--hidden-dims', type=str, default='128',
                        help='Comma-separated list of hidden layer dimensions (e.g., 256,128,64)')
     parser.add_argument('--seed', type=int, default=None, help='Random seed for reproducibility')
@@ -86,7 +87,7 @@ def main():
     
     # divide dataset into train and test sets
     print("Splitting dataset into train and test sets...")
-    train_dataset, test_dataset = DataLoader.holdout_split(Dataset(X, y), test_size=0.2, batch_size=args.batch_size)
+    train_dataset, test_dataset = DataLoader.holdout_split(Dataset(X, y), test_size=0.2, random_state=args.seed)
     print(f"Train set size: {len(train_dataset)}, Test set size: {len(test_dataset)}")
     
     # Create model, loss function, optimizer, and trainer
@@ -149,6 +150,7 @@ def main():
         f.write(f"Momentum: {args.momentum}\n")
         f.write(f"Weight decay: {args.weight_decay}\n")
         f.write(f"Scheduler: {args.scheduler}\n")
+        f.write(f"eta_min: {args.eta_min}\n")
         f.write(f"Warmup epochs: {args.warmup_epochs}\n")
         f.write(f"Experiment name: {args.experiment_name}\n")
         f.write(f"Hidden dimensions: {hidden_dims}\n")
@@ -169,7 +171,7 @@ def main():
     elif args.scheduler == "cosine":
         lr_scheduler = CosineAnnealingLRScheduler(initial_lr=args.lr,
                                                   T_max=args.epochs,
-                                                  eta_min=1e-6,
+                                                  eta_min=args.eta_min,
                                                   warmup_epochs=args.warmup_epochs,
                                                   warmup_start_lr=0.0001)
     else:

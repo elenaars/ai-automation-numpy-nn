@@ -130,7 +130,7 @@ class Trainer:
                 n_samples += x_batch.shape[0]
                 
                 # Backward pass with gradient clipping
-                grad = self.loss_fn.backward(y_batch, probs)
+                grad = self.loss_fn.backward(y_batch, y_pred, probs)
                 max_grad = max(max_grad, np.abs(grad).max())
                 grad = np.clip(grad, -1.0, 1.0)
                 self.model.backward(grad)

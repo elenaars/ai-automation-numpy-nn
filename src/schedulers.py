@@ -60,7 +60,7 @@ class ExponentialLRScheduler(LRScheduler):
     
 class WarmupLRScheduler(LRScheduler):
     """Warmup learning rate scheduler with cosine annealing after warmup"""
-    def __init__(self, initial_lr: float, warmup_epochs: int = 50, total_epochs: int = 1000) -> None:
+    def __init__(self, initial_lr: float, warmup_epochs: int = 50, total_epochs: int = 1000, eta_min: float = 1e-6) -> None:
         if warmup_epochs < 0:
             raise ValueError(f"WarmupLRScheduler: warmup_epochs must be a non-negative integer, got {warmup_epochs}")
         if warmup_epochs >= total_epochs:
@@ -68,16 +68,18 @@ class WarmupLRScheduler(LRScheduler):
         super().__init__(initial_lr)
         self.warmup_epochs = warmup_epochs
         self.total_epochs = total_epochs
+        self.eta_min = eta_min
                 
     def get_lr(self) -> float:
         if self.current_step < self.warmup_epochs:
-            return self.initial_lr * (self.current_step / self.warmup_epochs)
-        return self.initial_lr * 0.5 * (1 + np.cos(np.pi * (self.current_step - self.warmup_epochs) / (self.total_epochs - self.warmup_epochs)))
-    
+            lr =  self.initial_lr * (self.current_step / max(1, self.warmup_epochs))
+            return max(lr, self.eta_min)
+        lr = self.initial_lr * 0.5 * (1 + np.cos(np.pi * (self.current_step - self.warmup_epochs) / max(1, (self.total_epochs - self.warmup_epochs))))
+        return max(lr, self.eta_min)  # Ensure learning rate does not go
 class CosineAnnealingLRScheduler(LRScheduler):
     """Cosine annealing scheduler with warmup and restarts. \
         Warmup is optional and is controlled by warmup_epochs and warmup_start_lr."""
-    def __init__(self, initial_lr: float, T_max: int = 1000, eta_min: float = 0.0, warmup_epochs: int = 0, warmup_start_lr: float = 0.0001) -> None:
+    def __init__(self, initial_lr: float, T_max: int = 1000, eta_min: float = 1e-6, warmup_epochs: int = 0, warmup_start_lr: float = 0.0001) -> None:
         if T_max <= 0:
             raise ValueError(f"CosineAnnealingLRScheduler: T_max must be a positive integer, got {T_max}")
         if eta_min < 0:
@@ -95,12 +97,11 @@ class CosineAnnealingLRScheduler(LRScheduler):
     def get_lr(self) -> float:
         # Warmup phase
         if self.current_step < self.warmup_epochs:
-            return self.warmup_start_lr + (self.initial_lr - self.warmup_start_lr) * \
-                   (self.current_step / self.warmup_epochs)
+            return self.warmup_start_lr + (self.initial_lr - self.warmup_start_lr) * (self.current_step / max(1, self.warmup_epochs))
         
         # Cosine annealing phase
-        progress = (self.current_step - self.warmup_epochs) / (self.T_max - self.warmup_epochs)
+        progress = (self.current_step - self.warmup_epochs) / max(1,(self.T_max - self.warmup_epochs))
         progress = min(1.0, progress)  # Clip progress to [0, 1]
+        lr = self.eta_min + (self.initial_lr - self.eta_min) * (1 + np.cos(np.pi * progress)) / 2
         
-        return self.eta_min + (self.initial_lr - self.eta_min) * \
-               (1 + np.cos(np.pi * progress)) / 2
+        return max(self.eta_min, lr)  # Ensure learning rate does not go below eta_min
