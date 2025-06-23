@@ -63,6 +63,13 @@ python -m scripts.train \
  --warmup-epochs 20 \
 ```
 
+## Tips & Notes
+
+- For short training runs, always set `--eta-min` in schedulers to a small positive value (e.g., `1e-6`) to avoid optimizer errors.
+- The MNIST dataset is cached after first download for faster subsequent runs.
+- For best results on MNIST, use a larger model (e.g., `--hidden-dims 128,64`) and more epochs.
+- To save disk space, you can configure the code to save only final plots per fold by setting log_interval to anything >= epochs
+
 ## Project Structure
 - `src/`: Core implementation
   - `layers.py`: Neural network layers
@@ -74,3 +81,5 @@ python -m scripts.train \
   - `data_utils.py`: Dataset utilities
   - `cross_validator.py`: K-fold cross validation
 - `scripts/`: Training scripts
+
+

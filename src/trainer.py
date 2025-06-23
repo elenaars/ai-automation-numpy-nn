@@ -189,8 +189,8 @@ class Trainer:
                 
                 break
             
-            # Print loss every log_interval epochs
-            if show_plots_logs and epoch % log_interval == 0:
+            # Plot the decision boundary and loss landscape every log_interval epochs, but also at the last epoch
+            if show_plots_logs and ((epoch % log_interval == 0 and epoch > 0) or epoch == epochs - 1):
                 
                 
                 epoch_dir = os.path.join(self.visualizer.exp_dir, f'epoch_{epoch}')
