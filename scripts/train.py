@@ -41,7 +41,7 @@ def main():
     # Set up logging
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        format="%(asctime)s [%(levelname)s] %(name)s: \n %(message)s \n"
     )
     logger = logging.getLogger("train")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: \n %(message)s \n")
@@ -88,7 +88,7 @@ def main():
     else:
         # Load dataset from data_utils
         logger.info(f"Loading {args.dataset} dataset...")
-        X, y = load_openml_dataset(args.dataset,  logger = logger, data_dir = data_dir)
+        X, y = load_openml_dataset(args.dataset, data_dir = data_dir)
 
     #convert label to one-hot encoding
     logger.info("Converting labels to one-hot encoding...")
@@ -126,12 +126,12 @@ def main():
     for layer_info in initial_architecture:
         if isinstance(layer_info, tuple):
             cls, in_dim, out_dim = layer_info
-            layers.append(cls(in_dim, out_dim, logger = logger))
+            layers.append(cls(in_dim, out_dim))
         else:
-            layers.append(layer_info(logger=logger))
+            layers.append(layer_info())
 
     # Initialize model with list of layers
-    model = Sequential(layers, logger = logger)  # Pass the list directly, not unpacked
+    model = Sequential(layers)  # Pass the list directly, not unpacked
     
     logger.info("Model architecture:")
     model.summary()
@@ -187,7 +187,6 @@ def main():
                       loss_fn=loss_fn,
                       optimizer=optimizer,
                       exp_dir=exp_dir, 
-                      logger = logger
                       )
 
 
@@ -207,7 +206,7 @@ def main():
 
     # Create test loader and evaluate
     test_acc = trainer.compute_accuracy(DataLoader(test_dataset))
-    logger.info(f"\nFinal Test Accuracy: {test_acc:.2f}%")
+    logger.info(f"Final Test Accuracy: {test_acc:.2f}%")
 
 if __name__ == "__main__":
     main()

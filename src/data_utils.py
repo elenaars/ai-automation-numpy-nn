@@ -16,6 +16,8 @@ import numpy as np
 from sklearn.datasets import fetch_openml
 from sklearn.preprocessing import StandardScaler
 
+logger = logging.getLogger(__name__)
+
 # Dataset and DataLoader classes to wrap the data and operate on batches
 class Dataset:
     """
@@ -151,7 +153,7 @@ def normalize_features(X: np.ndarray, dataset_name: str) -> np.ndarray:
         # For synthetic data or unknown datasets, use min-max normalization
         return (X - X.min()) / (X.max() - X.min())
     
-def load_openml_dataset(dataset_name: str, logger: logging.Logger, data_dir: str = './data') -> Tuple[np.ndarray, np.ndarray]:
+def load_openml_dataset(dataset_name: str, data_dir: str = './data') -> Tuple[np.ndarray, np.ndarray]:
     """Generic function to load and cache OpenML datasets with proper normalization.
         Args:
             dataset_name: Name of the dataset ('mnist', 'fashion-mnist', 'iris')
