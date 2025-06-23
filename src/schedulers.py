@@ -58,27 +58,15 @@ class ExponentialLRScheduler(LRScheduler):
     def get_lr(self) -> float:
         return self.initial_lr * (self.gamma ** self.current_step)
     
-class WarmupLRScheduler(LRScheduler):
-    """Warmup learning rate scheduler with cosine annealing after warmup"""
-    def __init__(self, initial_lr: float, warmup_epochs: int = 50, total_epochs: int = 1000, eta_min: float = 1e-6) -> None:
-        if warmup_epochs < 0:
-            raise ValueError(f"WarmupLRScheduler: warmup_epochs must be a non-negative integer, got {warmup_epochs}")
-        if warmup_epochs >= total_epochs:
-            raise ValueError(f"WarmupLRScheduler: warmup_epochs ({warmup_epochs}) must be less than total_epochs ({total_epochs})")
-        super().__init__(initial_lr)
-        self.warmup_epochs = warmup_epochs
-        self.total_epochs = total_epochs
-        self.eta_min = eta_min
-                
-    def get_lr(self) -> float:
-        if self.current_step < self.warmup_epochs:
-            lr =  self.initial_lr * (self.current_step / max(1, self.warmup_epochs))
-            return max(lr, self.eta_min)
-        lr = self.initial_lr * 0.5 * (1 + np.cos(np.pi * (self.current_step - self.warmup_epochs) / max(1, (self.total_epochs - self.warmup_epochs))))
-        return max(lr, self.eta_min)  # Ensure learning rate does not go
+        
 class CosineAnnealingLRScheduler(LRScheduler):
     """Cosine annealing scheduler with warmup and restarts. \
-        Warmup is optional and is controlled by warmup_epochs and warmup_start_lr."""
+        Warmup is optional and is controlled by warmup_epochs and warmup_start_lr. \
+        If warmup_epochs is set to 0, no warmup is applied. 
+        T_max is the maximum number of steps for the cosine annealing cycle. \
+        eta_min is the minimum learning rate at the end of the cycle.
+    """
+    
     def __init__(self, initial_lr: float, T_max: int = 1000, eta_min: float = 1e-6, warmup_epochs: int = 0, warmup_start_lr: float = 0.0001) -> None:
         if T_max <= 0:
             raise ValueError(f"CosineAnnealingLRScheduler: T_max must be a positive integer, got {T_max}")

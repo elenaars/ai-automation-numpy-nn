@@ -9,7 +9,7 @@ from src.data_utils import *
 from src.layers import Sequential, Linear, ReLU
 from src.losses import CrossEntropySoftMax
 from src.optimizers import SGD 
-from src.schedulers import WarmupLRScheduler, ExponentialLRScheduler, CosineAnnealingLRScheduler
+from src.schedulers import ExponentialLRScheduler, CosineAnnealingLRScheduler
 from src.trainer import Trainer
 from src.cross_validator import CrossValidator
 from src.utils import one_hot_encode
@@ -162,10 +162,7 @@ def main():
     loss_fn = CrossEntropySoftMax()
     optimizer = SGD(learning_rate=args.lr)
 
-    if args.scheduler == "warmup":
-        lr_scheduler = WarmupLRScheduler(initial_lr=args.lr,
-                                     warmup_epochs=args.warmup_epochs)
-    elif args.scheduler == "exp":
+    if args.scheduler == "exp":
         lr_scheduler = ExponentialLRScheduler(initial_lr=args.lr,
                                           gamma=args.gamma)
     elif args.scheduler == "cosine":

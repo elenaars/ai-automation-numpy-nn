@@ -11,7 +11,7 @@ from .optimizers import Optimizer
 from .losses import Loss
 from .data_utils import DataLoader, Dataset
 from .visualizer import TrainingVisualizer, KFoldVisualizer
-from .schedulers import LRScheduler, ExponentialLRScheduler, WarmupLRScheduler
+from .schedulers import LRScheduler, ExponentialLRScheduler
 from .optimizers import SGD
 from .cross_validator import CrossValidator
 
@@ -316,6 +316,11 @@ class Trainer:
         # Set consistent batch size
         #kwargs['batch_size'] = min(32, len(dataset) // 10)  # Smaller batches for stability
 
+        # Get the scheduler class and its parameters from the provided scheduler
+        scheduler_class = type(kwargs['lr_scheduler'])
+        scheduler_params = kwargs['lr_scheduler'].__dict__.copy()
+        # Remove any stateful keys (like current_step) if present
+        scheduler_params.pop('current_step', None)
         
         for fold_idx, (train_idx, val_idx) in enumerate(cv.get_folds(dataset)):
             print(f"\nTraining Fold {fold_idx + 1}")
@@ -347,12 +352,9 @@ class Trainer:
             
             # Create fresh optimizer
             self.optimizer = SGD(learning_rate=lr_params['initial_lr'])
-            
-            # Create fresh scheduler for this fold (warmup)
-            kwargs['lr_scheduler'] = WarmupLRScheduler(
-                initial_lr=lr_params['initial_lr'],
-                warmup_epochs=kwargs.get('warmup_epochs', 50)
-                )        
+
+            # Then, for each fold:
+            kwargs['lr_scheduler'] = scheduler_class(**scheduler_params)# Create fresh loss function        
         
              # Create data loaders with consistent batch size
             train_loader = DataLoader(dataset, indices=train_idx, 
