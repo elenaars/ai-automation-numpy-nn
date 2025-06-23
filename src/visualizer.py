@@ -1,5 +1,6 @@
 # class TrainingVisualizer that stores the training history and plots the loss and accuracy
 import os
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import Optional
@@ -15,7 +16,7 @@ class TrainingVisualizer:
     TrainingVisualizer class to store the training history and plot the loss and accuracy.
     It provides methods to update the training history and plot the loss and accuracy.
     '''
-    def __init__(self, exp_dir: str)->None:
+    def __init__(self, exp_dir: str, logger: logging.Logger)->None:
         self.exp_dir = exp_dir
         os.makedirs(exp_dir, exist_ok=True)
         self.history = {
@@ -26,6 +27,7 @@ class TrainingVisualizer:
         }
         self.grid = None
         self.grid_coords = None
+        self.logger = logger
         
     def update(self, loss: float, val_loss: float, train_acc: float, val_acc: float):
         '''
@@ -80,7 +82,7 @@ class TrainingVisualizer:
         
         plt.savefig(filepath)
         plt.close()
-        print(f"Saved training plot to {filepath}")
+        self.logger.info(f"Saved training plot to {filepath}")
            
     
     def plot_decision_boundary(self, model: Sequential, x_train: np.ndarray, y_train: np.ndarray, filepath: str, ax: Optional[plt.Axes] = None) -> None:
@@ -135,7 +137,7 @@ class TrainingVisualizer:
         fig.colorbar(scatter, ax=ax, label='Class')
         fig.tight_layout()
         fig.savefig(filepath)
-        print(f"Saved decision boundary plot to {filepath}")
+        self.logger.info(f"Saved decision boundary plot to {filepath}")
         plt.close(fig)
         
     def weights_gradients_heatmap(self, model: Sequential, optimizer: Optimizer, filepath: str, ax: Optional[plt.Axes]=None) -> None:
@@ -154,7 +156,7 @@ class TrainingVisualizer:
                           if isinstance(layer, Linear)]
     
         if not linear_layers:
-            print("No linear layers to visualize.")
+            self.logger.info("No linear layers to visualize.")
             return
         
         num_layers = len(linear_layers)
@@ -194,7 +196,7 @@ class TrainingVisualizer:
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust layout to prevent overlap
         plt.savefig(filepath)
         plt.close()
-        print(f"Saved weights heatmap plot to {filepath}")
+        self.logger.info(f"Saved weights heatmap plot to {filepath}")
         
         
     
@@ -244,14 +246,14 @@ class TrainingVisualizer:
         plt.tight_layout()
         fig.savefig(filepath)
         plt.close(fig)
-        print(f"Saved loss landscape plot to {filepath}")
+        self.logger.info(f"Saved loss landscape plot to {filepath}")
 
         
 
 class KFoldVisualizer(TrainingVisualizer):
     """Extended visualizer for k-fold cross validation"""
-    def __init__(self, k_folds: int, exp_dir='kfold_plots') -> None:
-        super().__init__(exp_dir=exp_dir)
+    def __init__(self, k_folds: int, logger: logging.Logger, exp_dir='kfold_plots') -> None:
+        super().__init__(exp_dir=exp_dir, logger=logger)
         self.k_folds = k_folds
         self.fold_histories = []
         self.exp_dir = exp_dir
@@ -265,7 +267,7 @@ class KFoldVisualizer(TrainingVisualizer):
         """Plot aggregated results across folds"""
         
         if not self.fold_histories:
-            print("No fold histories to plot")
+            self.logger.info("No fold histories to plot")
             return
         
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
@@ -308,4 +310,4 @@ class KFoldVisualizer(TrainingVisualizer):
         plt.tight_layout()
         plt.savefig(filepath)
         plt.close()
-        print(f"Saved K-fold results plot to {filepath}")
+        self.logger.info(f"Saved K-fold results plot to {filepath}")

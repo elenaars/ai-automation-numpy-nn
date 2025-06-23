@@ -31,7 +31,11 @@ class CrossValidator:
             
         Returns:
             List of (train_indices, val_indices) tuples for each fold
-        """    
+        """ 
+        
+        if self.k > len(dataset):
+            raise ValueError(f"Number of folds k ({self.k}) cannot be greater than the number of samples in the dataset ({len(dataset)}).") 
+           
         
         indices = np.arange(len(dataset))
         self.random_state.shuffle(indices)

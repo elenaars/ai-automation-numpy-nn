@@ -10,6 +10,7 @@ and batching.
 
 from typing import Tuple, Optional, Union
 import os
+import logging
 
 import numpy as np
 from sklearn.datasets import fetch_openml
@@ -150,7 +151,7 @@ def normalize_features(X: np.ndarray, dataset_name: str) -> np.ndarray:
         # For synthetic data or unknown datasets, use min-max normalization
         return (X - X.min()) / (X.max() - X.min())
     
-def load_openml_dataset(dataset_name: str, data_dir: str = './data') -> Tuple[np.ndarray, np.ndarray]:
+def load_openml_dataset(dataset_name: str, logger: logging.Logger, data_dir: str = './data') -> Tuple[np.ndarray, np.ndarray]:
     """Generic function to load and cache OpenML datasets with proper normalization.
         Args:
             dataset_name: Name of the dataset ('mnist', 'fashion-mnist', 'iris')
@@ -176,14 +177,14 @@ def load_openml_dataset(dataset_name: str, data_dir: str = './data') -> Tuple[np
     
     if os.path.exists(cache_file):
         try:
-            print(f"Loading {dataset_name} from cache...")
+            logger.info(f"Loading {dataset_name} from cache...")
             with np.load(cache_file) as data:
                 return data['X'], data['y']
         except Exception as e:
-            print(f"Cache loading failed: {e}. Removing corrupted cache and re-downloading...")
+            logger.error(f"Cache loading failed: {e}. Removing corrupted cache and re-downloading...")
             os.remove(cache_file)
     
-    print(f"Downloading {dataset_name} dataset...")
+    logger.info(f"Downloading {dataset_name} dataset...")
     dataset = fetch_openml(dataset_mapping[dataset_name], version=1)
     
     # Handle different return formats from fetch_openml
@@ -197,7 +198,7 @@ def load_openml_dataset(dataset_name: str, data_dir: str = './data') -> Tuple[np
     X = normalize_features(X, dataset_name)
     
     # Save to cache
-    print(f"Saving {dataset_name} to cache...")
+    logger.info(f"Saving {dataset_name} to cache...")
     np.savez_compressed(cache_file, X=X, y=y)
     
     return X, y

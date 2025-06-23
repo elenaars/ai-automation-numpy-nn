@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import copy
+import logging
 from typing import Dict, List, Union, Optional
 from .layers import Linear, Sequential
 from .optimizers import Optimizer
@@ -20,7 +21,7 @@ from .optimizers import SGD
 from .cross_validator import CrossValidator
 
 class Trainer:
-    def __init__(self, model: Sequential, loss_fn: Loss, optimizer: Optimizer, exp_dir: str) -> None:
+    def __init__(self, model: Sequential, loss_fn: Loss, optimizer: Optimizer, exp_dir: str, logger: logging.Logger) -> None:
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
@@ -31,12 +32,16 @@ class Trainer:
         os.makedirs(self.exp_dir, exist_ok=True)
         os.makedirs(self.plots_dir, exist_ok=True)
         
+        # Initialize the logger
+        self.logger = logger       
+
+        
     def save_epoch_plots(self, train_loader, val_loader, epoch_dir):
                 self.visualizer.plot_decision_boundary(
                     self.model, 
                     train_loader.dataset.x, 
                     train_loader.dataset.y,
-                    filepath=os.path.join(epoch_dir, "decision_boundary.png")
+                    filepath=os.path.join(epoch_dir, "decision_boundary.png") 
                     )
         
                 self.visualizer.plot_loss_landscape(
@@ -64,7 +69,7 @@ class Trainer:
             c. Compute the loss using the loss function.
             d. Backward pass: Compute the gradients of the loss with respect to the model parameters.
             e. Update the model parameters using the optimizer.
-            f. Print the loss every 100 epochs.
+            f. Log and plot the loss every 100 epochs.
         3. Validate the model using the validation set.
         4. Return the trained model.
         Args:
@@ -180,9 +185,7 @@ class Trainer:
             try:
                 validate_metrics(epoch_loss, val_loss, train_acc)
             except ValueError as e:
-                print(f"Error at epoch {epoch}:")
-                print(f"Max gradient magnitude: {max_grad}")
-                print(f"Current learning rate: {current_lr}")
+                self.logger.error(f"Error at epoch {epoch}: \n Max gradient magnitude: {max_grad} \n Current learning rate: {current_lr} ")
                 raise e
             
             self.visualizer.update(epoch_loss, val_loss, train_acc, val_acc)
@@ -198,7 +201,7 @@ class Trainer:
                 patience_counter += 1
 
             if patience_counter >= patience:
-                print(f"Early stopping triggered after {epoch} epochs")
+                self.logger.info(f"Early stopping triggered after {epoch} epochs")
                 # Restore best model
                 linear_layers = [l for l in self.model.layers if isinstance(l, Linear)]
                 for layer, (weights, bias) in zip(linear_layers, best_model_state):
@@ -220,10 +223,10 @@ class Trainer:
                 
                 self.save_epoch_plots(train_loader, val_loader, epoch_dir)
             
-                print(f"Saved plots for epoch {epoch} in {epoch_dir}")               
+                self.logger.info(f"Saved plots for epoch {epoch} in {epoch_dir}")               
                     
-                # Print essential metrics
-                print(f"Epoch {epoch}: Loss={epoch_loss:.4f}, Val Loss={val_loss:.4f}, "
+                # Log essential metrics
+                self.logger.info(f"Epoch {epoch}: Loss={epoch_loss:.4f}, Val Loss={val_loss:.4f}, "
                 f"Acc={train_acc:.1f}%, Val Acc={val_acc:.1f}%")
                       
         # Save final metrics history plot
@@ -298,7 +301,7 @@ class Trainer:
         kfold_dir = os.path.join(self.plots_dir, 'kfold')
         os.makedirs(kfold_dir, exist_ok=True)
         
-        cv_visualizer = KFoldVisualizer(len(cv.get_folds(dataset)), exp_dir=kfold_dir)
+        cv_visualizer = KFoldVisualizer(len(cv.get_folds(dataset)), logger=self.logger, exp_dir=kfold_dir)
         fold_scores = []
         best_model = None
         best_score = float('inf')
@@ -321,14 +324,14 @@ class Trainer:
         scheduler_params.pop('current_step', None)
         
         for fold_idx, (train_idx, val_idx) in enumerate(cv.get_folds(dataset)):
-            print(f"\nTraining Fold {fold_idx + 1}")
+            self.logger.info(f"Training Fold {fold_idx + 1}")
         
             
             fold_dir = os.path.join(self.plots_dir, f'fold_{fold_idx + 1}')
             os.makedirs(fold_dir, exist_ok=True)
             
             # Reset visualization history for each fold
-            self.visualizer = TrainingVisualizer(exp_dir=fold_dir)
+            self.visualizer = TrainingVisualizer(exp_dir=fold_dir, logger=self.logger)
             
             # Create fresh model with consistent initialization
             np.random.seed(42 + fold_idx)  # Consistent but different for each fold        
@@ -336,13 +339,13 @@ class Trainer:
             for layer_info in initial_architecture:
                 if isinstance(layer_info, tuple):
                     cls, in_dim, out_dim = layer_info
-                    layer = cls(in_dim, out_dim)
+                    layer = cls(in_dim, out_dim, logger = self.logger)
                     # Use proper Xavier/Glorot initialization
                     layer.weights = np.random.randn(in_dim, out_dim) * np.sqrt(2.0 / in_dim)
                     layers.append(layer)
                 else:
-                    layers.append(layer_info())    
-            self.model = Sequential(layers) 
+                    layers.append(layer_info(logger=self.logger))    
+            self.model = Sequential(layers, logger=self.logger) 
             
             # Create fresh optimizer
             self.optimizer = SGD(
@@ -372,7 +375,7 @@ class Trainer:
             
             # Add loss landscape visualization after training each fold
             if kwargs.get('debug', False):
-                print(f"\nLoss landscape for fold {fold_idx + 1}")
+                self.logger.info(f"\nLoss landscape for fold {fold_idx + 1}")
                 cv_visualizer.plot_loss_landscape(self.model, val_loader, self.loss_fn)
 
         
@@ -392,7 +395,7 @@ class Trainer:
         
         # Plot final loss landscape
         if kwargs.get('debug', False):
-            print("\nFinal model loss landscape")
+            self.logger.info("\nFinal model loss landscape")
             cv_visualizer.plot_loss_landscape(
                 self.model,
                 DataLoader(dataset, batch_size=kwargs.get('batch_size', 32)),
@@ -406,7 +409,7 @@ class Trainer:
     
         mean_score = np.mean(fold_scores)
         std_score = np.std(fold_scores)
-        print(f"\nCross-validation score: {mean_score:.4f} ± {std_score:.4f}")
+        self.logger.info(f"\nCross-validation score: {mean_score:.4f} ± {std_score:.4f}")
         return {
             'mean_score': mean_score,
             'std_score': std_score,

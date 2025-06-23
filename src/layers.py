@@ -6,6 +6,7 @@ It includes Linear, ReLU, and Sequential layers, each implementing the forward a
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Optional, Union, Dict, Any
 import numpy as np
+import logging
 
 
 class Layer(ABC):
@@ -15,10 +16,11 @@ class Layer(ABC):
     the instances store their input and output dimensions.
     """
     
-    def __init__(self, input_dim: Optional[int] = None, output_dim: Optional[int] = None) -> None:
+    def __init__(self, input_dim: Optional[int] = None, output_dim: Optional[int] = None, logger: Optional[logging.Logger] = None) -> None:
         self._input_dim = input_dim
         self._output_dim = output_dim
         self.input = None
+        self.logger = logger
 
     @property
     def input_dim(self) -> Optional[int]:
@@ -62,8 +64,8 @@ class ReLU(Layer):
     Applies the ReLU activation function element-wise to the input.
     The ReLU function is defined as f(x) = max(0, x).
     """
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, logger: logging.Logger) -> None:
+        super().__init__(logger = logger)
         
     def forward(self, x: np.ndarray) -> np.ndarray:
         self.input = x
@@ -85,10 +87,10 @@ class Linear(Layer):
     in a way that maintains the variance of the activations across layers.
     The bias is initialized to zeros.
     """
-    def __init__(self, input_dim: int, output_dim: int) -> None:
+    def __init__(self, input_dim: int, output_dim: int, logger: logging.Logger) -> None:
         if input_dim < 1 or output_dim < 1:
             raise ValueError("input_dim and output_dim must be positive integers.")
-        super().__init__(input_dim, output_dim)
+        super().__init__(input_dim, output_dim, logger = logger)
         # Initialize weights and bias
         self.weights = np.random.randn(input_dim, output_dim) * np.sqrt(2.0 / input_dim)
         self.bias = np.zeros((1, output_dim))
@@ -133,11 +135,11 @@ class Sequential(Layer):
     A container for stacking layers in a linear fashion.
     The input to the first layer is the input to the model, and the output of the last layer is the output of the model.
     """
-    def __init__(self, layers: List[Layer]) -> None:
+    def __init__(self, layers: List[Layer], logger: logging.Logger) -> None:
         if len(layers) < 1:
             raise ValueError("Sequential model must have at least one layer.")
         self.layers = layers
-        super().__init__(layers[0].input_dim, layers[-1].output_dim)
+        super().__init__(layers[0].input_dim, layers[-1].output_dim, logger=logger)
         self.__check_consistency__()
 
     def __check_consistency__(self) -> None:
@@ -175,23 +177,22 @@ class Sequential(Layer):
     
     def summary(self) -> None:
         """
-        Print a summary of the model architecture.
+        Log a summary of the model architecture.
         """
-        print("Model Summary:")
-        print("-" * 50)
+        self.logger.info("Model Summary: \n " + "-" * 50)
         total_params = 0
         for i, layer in enumerate(self.layers):
             if isinstance(layer, Linear):
                 params = np.prod(layer.weights.shape) + np.prod(layer.bias.shape)
                 total_params += params
-                print(f"Layer {i}: {layer.__class__.__name__}, "
+                self.logger.info(f"Layer {i}: {layer.__class__.__name__}, "
                       f"Input: {layer.input_dim}, Output: {layer.output_dim}, "
                       f"Parameters: {params}")
             else:
-                print(f"Layer {i}: {layer.__class__.__name__}")
-        print("-" * 50)
-        print(f"Total parameters: {total_params}")
-        print("-" * 50) 
+                self.logger.info(f"Layer {i}: {layer.__class__.__name__}")
+        #print("-" * 50)
+        self.logger.info("-"*50 + f"Total parameters: {total_params}" + "\n" + "-" * 50)
+        #print("-" * 50) 
         
     def save_architecture(self, file_path: str) -> None:
         """

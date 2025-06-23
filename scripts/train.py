@@ -4,6 +4,7 @@
 import argparse
 import os
 import time
+import logging
 import numpy as np
 from src.data_utils import *
 from src.layers import Sequential, Linear, ReLU
@@ -37,6 +38,14 @@ def setup_experiment_dir(experiment_name: str) -> str:
 
 def main():
     
+    # Set up logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
+    logger = logging.getLogger("train")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: \n %(message)s \n")
+    
     #parse command line arguments
     parser = argparse.ArgumentParser(description="Train a neural network model.")
     parser.add_argument("--dataset", choices=["mnist", "digits", "synthetic"], default="mnist",  help='Dataset to use (mnist, digits, or synthetic: spirals)')
@@ -67,28 +76,28 @@ def main():
 
     if args.seed is not None:
         np.random.seed(args.seed)
-        print(f"Using seed: {args.seed}")
+        logger.info(f"Using seed: {args.seed}")
 
     data_dir = args.data_dir if args.data_dir else './data'
 
     # download / generate dataset depending on many options
     if args.dataset == 'synthetic':
             # Generate synthetic spiral dataset
-            print("Generating spiral dataset...")
+            logger.info("Generating spiral dataset...")
             X, y = generate_spiral_data(args.n_samples, args.n_classes, args.class_sep, args.seed)    
     else:
         # Load dataset from data_utils
-        print(f"Loading {args.dataset} dataset...")
-        X, y = load_openml_dataset(args.dataset, data_dir)
+        logger.info(f"Loading {args.dataset} dataset...")
+        X, y = load_openml_dataset(args.dataset,  logger = logger, data_dir = data_dir)
 
     #convert label to one-hot encoding
-    print("Converting labels to one-hot encoding...")
+    logger.info("Converting labels to one-hot encoding...")
     y = one_hot_encode(y)
     
     # divide dataset into train and test sets
-    print("Splitting dataset into train and test sets...")
+    logger.info("Splitting dataset into train and test sets...")
     train_dataset, test_dataset = DataLoader.holdout_split(Dataset(X, y), test_size=0.2, random_state=args.seed)
-    print(f"Train set size: {len(train_dataset)}, Test set size: {len(test_dataset)}")
+    logger.info(f"Train set size: {len(train_dataset)}, Test set size: {len(test_dataset)}")
     
     # Create model, loss function, optimizer, and trainer
     
@@ -117,15 +126,15 @@ def main():
     for layer_info in initial_architecture:
         if isinstance(layer_info, tuple):
             cls, in_dim, out_dim = layer_info
-            layers.append(cls(in_dim, out_dim))
+            layers.append(cls(in_dim, out_dim, logger = logger))
         else:
-            layers.append(layer_info())
+            layers.append(layer_info(logger=logger))
 
     # Initialize model with list of layers
-    model = Sequential(layers)  # Pass the list directly, not unpacked
+    model = Sequential(layers, logger = logger)  # Pass the list directly, not unpacked
     
-    print("Model architecture:")
-    print(model.summary())
+    logger.info("Model architecture:")
+    model.summary()
     
     exp_dir = setup_experiment_dir(args.experiment_name)
     
@@ -135,7 +144,7 @@ def main():
     arch_file = os.path.join(exp_dir, "model_architecture.txt")
         
     model.save_architecture(arch_file)
-    print("Model architecture saved to model_architecture.txt")
+    logger.info("Model architecture saved to model_architecture.txt")
     # save experiment parameters to a file
     with open(os.path.join(exp_dir, "experiment_params.txt"), "w") as f:
         f.write(f"Dataset: {args.dataset}\n")
@@ -157,7 +166,7 @@ def main():
         f.write(f"log interval: {args.log_interval}\n")
         if args.seed is not None:
             f.write(f"Seed: {args.seed}\n")
-    print("Experiment parameters saved to experiment_params.txt")
+    logger.info("Experiment parameters saved to experiment_params.txt")
 
     loss_fn = CrossEntropySoftMax()
     optimizer = SGD(learning_rate=args.lr)
@@ -177,7 +186,8 @@ def main():
     trainer = Trainer(model=model,
                       loss_fn=loss_fn,
                       optimizer=optimizer,
-                      exp_dir=exp_dir
+                      exp_dir=exp_dir, 
+                      logger = logger
                       )
 
 
@@ -197,7 +207,7 @@ def main():
 
     # Create test loader and evaluate
     test_acc = trainer.compute_accuracy(DataLoader(test_dataset))
-    print(f"\nFinal Test Accuracy: {test_acc:.2f}%")
+    logger.info(f"\nFinal Test Accuracy: {test_acc:.2f}%")
 
 if __name__ == "__main__":
     main()
