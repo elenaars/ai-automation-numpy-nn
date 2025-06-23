@@ -11,6 +11,23 @@ A clean implementation of neural networks using only NumPy, featuring:
 - Training visualization
 - Support for MNIST, Digits and synthetic datasets
 
+## Features
+
+- Fully NumPy-based neural network implementation
+- Modular architecture: easily add new layers, losses, or optimizers
+- Multiple learning rate schedulers (step, exponential, cosine, warmup)
+- K-fold cross-validation and holdout validation
+- Training visualization: loss/accuracy curves, weight heatmaps, loss landscapes
+- Dataset caching for fast repeated experiments
+- Robust error handling and input validation
+
+## Requirements
+
+- Python 3.9+
+- numpy >= 1.24.0
+- matplotlib >= 3.7.0
+- scikit-learn >= 1.2.0
+
 ## Installation
 ```bash
 pip install -r requirements.txt
@@ -25,7 +42,7 @@ python -m scripts.train \
     --epochs 50 \
     --batch-size 32 \
     --lr 0.01 \
-    --scheduler cosine
+    --scheduler cosine \
     --log-interval 10
 ```
 
