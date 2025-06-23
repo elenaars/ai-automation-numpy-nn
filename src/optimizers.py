@@ -37,12 +37,17 @@ class Optimizer(ABC):
 
 class SGD(Optimizer):
     """
-    Stochastic Gradient Descent (SGD) optimizer.
-    It updates the parameters using the gradients and a learning rate.
+    Stochastic Gradient Descent (SGD) optimizer with optional momentum and weight decay.
+
+    This optimizer maintains a separate velocity vector for each parameter array.
     The update rule is:
         v = momentum * v - learning_rate * (grads + weight_decay * params)
         params += v
-    where params are the parameters to be updated, learning_rate is the learning rate, and grads are the gradients.
+
+    Args:
+        learning_rate (float): Learning rate for parameter updates.
+        momentum (float): Momentum factor (default: 0.0, no momentum).
+        weight_decay (float): L2 regularization factor (default: 0.0, no weight decay).
     """
     
     def __init__(self, learning_rate: float = 0.01, momentum: float = 0.0, weight_decay: float = 0.0) -> None:
@@ -58,6 +63,19 @@ class SGD(Optimizer):
         self.velocity = {}  # Dict to store velocity for each param. Will be initialized on first step
 
     def step(self, params: np.ndarray, grads: np.ndarray) -> None:
+        """
+        Update the parameters using SGD with momentum and weight decay.
+
+        Maintains a separate velocity for each parameter array.
+
+        Args:
+            params (np.ndarray): Parameters to be updated.
+            grads (np.ndarray): Gradients of the loss with respect to the parameters.
+
+        Returns:
+            None
+        """
+        
         if params.shape != grads.shape:
             raise ValueError(f"SGD: Shape mismatch in SGD step: parameters {params.shape} and gradients {grads.shape} must have the same shape.")
         param_id = id(params)
