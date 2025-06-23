@@ -31,6 +31,27 @@ class Trainer:
         os.makedirs(self.exp_dir, exist_ok=True)
         os.makedirs(self.plots_dir, exist_ok=True)
         
+    def save_epoch_plots(self, train_loader, val_loader, epoch_dir):
+                self.visualizer.plot_decision_boundary(
+                    self.model, 
+                    train_loader.dataset.x, 
+                    train_loader.dataset.y,
+                    filepath=os.path.join(epoch_dir, "decision_boundary.png")
+                    )
+        
+                self.visualizer.plot_loss_landscape(
+                    self.model,
+                    val_loader,
+                    self.loss_fn,
+                    filepath=os.path.join(epoch_dir,"loss_landscape.png")
+                    )
+        
+                self.visualizer.weights_gradients_heatmap(
+                    self.model,
+                    self.optimizer,
+                    filepath=os.path.join(epoch_dir,"weights_heatmap.png")
+                    )
+        
         
     def train(self, train_loader: DataLoader, val_loader: DataLoader, epochs: int = 1000,  show_plots_logs:bool = True, log_interval:int = 200, patience: int = 20, min_delta: float = 1e-4, lr_scheduler: Optional[LRScheduler] = None, debug: bool = False, **kwargs) -> Dict[str, List[float]]:
         """
@@ -109,9 +130,7 @@ class Trainer:
             epoch_loss = 0
             n_samples = 0
             
-            current_lr = lr_scheduler.get_lr()
-           # print(f"Epoch {epoch}, LR: {current_lr:.6f}") if epoch % log_interval == 0 else None
-            
+            current_lr = lr_scheduler.get_lr()           
             self.optimizer.update_learning_rate(current_lr)
             
             # Monitor gradients before updates
@@ -195,45 +214,18 @@ class Trainer:
             # Plot the decision boundary and loss landscape every log_interval epochs, but also at the last epoch
             if show_plots_logs and ((epoch % log_interval == 0 and epoch > 0) or epoch == epochs - 1):
                 
-                
                 epoch_dir = os.path.join(self.visualizer.exp_dir, f'epoch_{epoch}')
                 os.makedirs(epoch_dir, exist_ok=True)
                 os.sync()
                 
-                # Save plots in epoch directory
-                self.visualizer.plot_decision_boundary(
-                    self.model, 
-                    train_loader.dataset.x, 
-                    train_loader.dataset.y,
-                    filepath=os.path.join(epoch_dir, "decision_boundary.png")
-                    )
-        
-                self.visualizer.plot_loss_landscape(
-                    self.model,
-                    val_loader,
-                    self.loss_fn,
-                    filepath=os.path.join(epoch_dir,"loss_landscape.png")
-                    )
-        
-                self.visualizer.weights_gradients_heatmap(
-                    self.model,
-                    self.optimizer,
-                    filepath=os.path.join(epoch_dir,"weights_heatmap.png")
-                    )
-        
-                #self.visualizer.plot_metrics_history(
-                #    filepath=os.path.join(epoch_dir, "metrics_history.png")
-                #)
-                 
+                self.save_epoch_plots(train_loader, val_loader, epoch_dir)
+            
                 print(f"Saved plots for epoch {epoch} in {epoch_dir}")               
                     
                 # Print essential metrics
                 print(f"Epoch {epoch}: Loss={epoch_loss:.4f}, Val Loss={val_loss:.4f}, "
                 f"Acc={train_acc:.1f}%, Val Acc={val_acc:.1f}%")
-
-            
-                
-                
+                      
         # Save final metrics history plot
         final_metrics_path = os.path.join(self.visualizer.exp_dir, "final_metrics_history.png")
         self.visualizer.plot_metrics_history(filepath=final_metrics_path)
@@ -241,7 +233,7 @@ class Trainer:
         return self.visualizer.history
                 
     def validate(self, val_loader: DataLoader) -> float:
-        '''
+        """
         Validate the model using the validation set.
         The validation loop consists of the following steps:
         1. Iterate over the validation set in batches.
@@ -252,7 +244,7 @@ class Trainer:
             val_loader (DataLoader): The DataLoader for the validation set.
         Returns:
             float: The average loss for the validation set.
-        '''
+        """
         
         val_loss = 0
         n_samples = 0
@@ -264,14 +256,14 @@ class Trainer:
         return val_loss / n_samples
     
     def compute_accuracy(self, loader: DataLoader) -> float:
-        '''
+        """
         Compute the accuracy of the model on the given DataLoader.
         The accuracy is defined as the number of correct predictions divided by the total number of predictions.
         Args:
             loader (DataLoader): The DataLoader for the dataset.
         Returns:
             float: The accuracy of the model on the dataset.
-        ''' 
+        """
         total_correct = 0
         total_samples = 0
         smooth_window = 5  
@@ -291,7 +283,17 @@ class Trainer:
     
     
     def train_with_cv(self, dataset: Dataset, cv: CrossValidator, plots_dir='kfold_plots', **kwargs) -> Dict[str, Union[float, List[float], Sequential, KFoldVisualizer]]:
-        """Train with cross-validation and return the best model"""
+        """
+        Train with cross-validation and return the best model
+        Args:
+            dataset (Dataset): The dataset to use for training and validation.
+            cv (CrossValidator): The cross-validator instance to use for splitting the dataset.
+            plots_dir (str): Directory to save k-fold plots.
+            **kwargs: Additional arguments for training (e.g., epochs, batch_size, lr_scheduler, etc.)
+        Returns:
+            dict: A dictionary containing the mean score, standard deviation, best model, fold scores,
+                  and a KFoldVisualizer instance with aggregated results.
+        """
         
         kfold_dir = os.path.join(self.plots_dir, 'kfold')
         os.makedirs(kfold_dir, exist_ok=True)
@@ -343,7 +345,11 @@ class Trainer:
             self.model = Sequential(layers) 
             
             # Create fresh optimizer
-            self.optimizer = SGD(learning_rate=lr_params['initial_lr'])
+            self.optimizer = SGD(
+                learning_rate=lr_params['initial_lr'], 
+                momentum=kwargs.get('momentum', 0.9),
+                weight_decay=kwargs.get('weight_decay', 0.0)
+            )
 
             # Create fresh learning rate scheduler
             lr_scheduler = scheduler_class(**scheduler_params)        
@@ -394,10 +400,9 @@ class Trainer:
             )
     
     
-        # Show aggregated results
-        cv_visualizer.plot_k_fold_results()
-        
-        
+        # Plot aggregated results
+        cv_visualizer.plot_k_fold_results() 
+
     
         mean_score = np.mean(fold_scores)
         std_score = np.std(fold_scores)

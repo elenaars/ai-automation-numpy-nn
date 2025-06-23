@@ -39,17 +39,32 @@ class SGD(Optimizer):
     """
     Stochastic Gradient Descent (SGD) optimizer.
     It updates the parameters using the gradients and a learning rate.
-    The update rule is defined as:
-    params = params - learning_rate * grads
+    The update rule is:
+        v = momentum * v - learning_rate * (grads + weight_decay * params)
+        params += v
     where params are the parameters to be updated, learning_rate is the learning rate, and grads are the gradients.
     """
     
-    def __init__(self, learning_rate: float = 0.01) -> None:
+    def __init__(self, learning_rate: float = 0.01, momentum: float = 0.0, weight_decay: float = 0.0) -> None:
         if learning_rate <= 0:
             raise ValueError(f"SGD: Learning rate must be a positive number, got {learning_rate}")
+        if momentum < 0 or momentum >= 1:
+            raise ValueError(f"SGD: Momentum must be in [0, 1), got {momentum}")
+        if weight_decay < 0:
+            raise ValueError(f"SGD: Weight decay must be non-negative, got {weight_decay}")
         self.learning_rate = learning_rate
+        self.momentum = momentum
+        self.weight_decay = weight_decay
+        self.velocity = {}  # Dict to store velocity for each param. Will be initialized on first step
 
     def step(self, params: np.ndarray, grads: np.ndarray) -> None:
         if params.shape != grads.shape:
             raise ValueError(f"SGD: Shape mismatch in SGD step: parameters {params.shape} and gradients {grads.shape} must have the same shape.")
-        params -= self.learning_rate * grads
+        param_id = id(params)
+        if param_id not in self.velocity:
+            self.velocity[param_id] = np.zeros_like(params)
+        # Apply weight decay
+        grads += self.weight_decay * params
+        # Update velocity with momentum
+        self.velocity[param_id] = self.momentum * self.velocity[param_id] - self.learning_rate * grads
+        params += self.velocity[param_id]
