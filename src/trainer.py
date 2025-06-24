@@ -35,65 +35,68 @@ class Trainer:
         os.makedirs(self.plots_dir, exist_ok=True)      
 
         
-    def save_epoch_plots(self, train_loader, val_loader, epoch_dir):
-                self.visualizer.plot_decision_boundary(
-                    self.model, 
-                    train_loader.dataset.x, 
-                    train_loader.dataset.y,
-                    filepath=os.path.join(epoch_dir, "decision_boundary.png") 
-                    )
-        
-                self.visualizer.plot_loss_landscape(
-                    self.model,
-                    val_loader,
-                    self.loss_fn,
-                    filepath=os.path.join(epoch_dir,"loss_landscape.png")
-                    )
-        
-                self.visualizer.weights_gradients_heatmap(
-                    self.model,
-                    self.optimizer,
-                    filepath=os.path.join(epoch_dir,"weights_heatmap.png")
-                    )
-        
-        
-    def train(self, train_loader: DataLoader, val_loader: DataLoader, epochs: int = 1000,  show_plots_logs:bool = True, log_interval:int = 200, patience: int = 20, min_delta: float = 1e-4, lr_scheduler: Optional[LRScheduler] = None, debug: bool = False, **kwargs) -> Dict[str, List[float]]:
+    def save_epoch_plots(self, train_loader: DataLoader, val_loader: DataLoader, epoch_dir: str) -> None:
         """
-        Train the model using the specified loss function and optimizer.
-        The training loop consists of the following steps:
-        1. Split the dataset into training and validation sets.
-        2. For each epoch:
-            a. Iterate over the training set in batches.
-            b. Forward pass: Compute the predicted labels using the model.
-            c. Compute the loss using the loss function.
-            d. Backward pass: Compute the gradients of the loss with respect to the model parameters.
-            e. Update the model parameters using the optimizer.
-            f. Log and plot the loss every 100 epochs.
-        3. Validate the model using the validation set.
-        4. Return the trained model.
+        Save plots for the current epoch.
         Args:
             train_loader (DataLoader): The DataLoader for the training set.
             val_loader (DataLoader): The DataLoader for the validation set.
-            epochs (int): Number of epochs for training. Default is 1000.
-            show_plots_logs (bool): Whether to show the plots and output statistics regularly during training. Default is True.
-            log_interval (int): Interval for showing plots and statistics. Default is 200.
-            patience (int): Number of epochs to wait for improvement before early stopping. Default is 10.
-            min_delta (float): Minimum change in the validation loss to qualify as an improvement. Default is 1e-4.
-            lr_scheduler (LRScheduler): Learning rate scheduler to adjust the learning rate during training.
-            **kwargs: Additional arguments (e.g., batch_size)
-        Returns:
-            dict: Training history containing loss, validation loss, training accuracy, and validation accuracy.
+            epoch_dir (str): Directory to save the plots for the current epoch.
         """
+        self.visualizer.plot_decision_boundary(
+            self.model, 
+            train_loader.dataset.x, 
+            train_loader.dataset.y,
+            filepath=os.path.join(epoch_dir, "decision_boundary.png") 
+            )
         
-        if debug:
-            stats = {}
-            for i, layer in enumerate(self.model.layers):
-                if isinstance(layer, Linear):
-                    stats[f'layer_{i}'] = {
-                        'weight_norm': np.linalg.norm(layer.weights),
-                        'grad_norm': np.linalg.norm(layer.grad_weights) if layer.grad_weights is not None else 0
-                    }
-            weight_stats.append(stats)
+        self.visualizer.plot_loss_landscape(
+            self.model,
+            val_loader,
+            self.loss_fn,
+            filepath=os.path.join(epoch_dir,"loss_landscape.png")
+            )
+        
+        self.visualizer.weights_gradients_heatmap(
+            self.model,
+            self.optimizer,
+            filepath=os.path.join(epoch_dir,"weights_heatmap.png")
+            )
+        
+        
+    def train(self, train_loader: DataLoader, val_loader: DataLoader, epochs: int = 1000,  show_plots_logs:bool = True, log_interval:int = 200, patience: int = 20, min_delta: float = 1e-4, lr_scheduler: Optional[LRScheduler] = None, **kwargs) -> Dict[str, List[float]]:
+        """
+        Train the model using the specified loss function and optimizer.
+
+        The training loop performs:
+            - Forward and backward passes for each batch in the training set.
+            - Parameter updates using the optimizer.
+            - Learning rate scheduling (if provided).
+            - Validation and accuracy computation at the end of each epoch.
+            - Early stopping based on validation loss improvement.
+            - Optional logging and plotting at specified intervals.
+
+        Args:
+            train_loader (DataLoader): DataLoader for the training set.
+            val_loader (DataLoader): DataLoader for the validation set.
+            epochs (int): Number of epochs to train. Default is 1000.
+            show_plots_logs (bool): Whether to save plots and log statistics during training. Default is True.
+            log_interval (int): Interval (in epochs) for saving plots and logging. Default is 200.
+            patience (int): Number of epochs to wait for improvement before early stopping. Default is 20.
+            min_delta (float): Minimum relative improvement in validation loss to reset patience. Default is 1e-4.
+            lr_scheduler (Optional[LRScheduler]): Learning rate scheduler. If None, uses ExponentialLRScheduler.
+            **kwargs: Additional arguments (e.g., batch_size).
+
+        Returns:
+            Dict[str, List[float]]: Training history with keys:
+                - 'loss': Training loss per epoch.
+                - 'val_loss': Validation loss per epoch.
+                - 'train_acc': Training accuracy per epoch.
+                - 'val_acc': Validation accuracy per epoch.
+
+        Raises:
+            ValueError: If loss, validation loss, or accuracy are invalid (NaN, inf, or out of range).
+        """
         
         def validate_metrics(loss: float, val_loss: float, acc: float) -> None:
             """Helper function to validate metrics"""
@@ -109,7 +112,6 @@ class Trainer:
             lr_scheduler = ExponentialLRScheduler(0.01, gamma=0.99)
             
         epoch_times = [] # List to store training times per epoch for logging
-        weight_stats = [] # List to store weight statistics for debugging
         
         # Initialize best validation loss, best model state and patiance counter for early stopping
         best_val_loss = float('inf')
@@ -118,18 +120,7 @@ class Trainer:
         
         # Training loop
         for epoch in range(epochs):
-            if debug:
-                stats = {}
-                for i, layer in enumerate(self.model.layers):
-                    if isinstance(layer, Linear):
-                        stats[f'layer_{i}'] = {
-                            'weight_mean': layer.weights.mean(),
-                            'weight_std': layer.weights.std(),
-                            'weight_max': np.abs(layer.weights).max(),
-                            'grad_max': np.abs(layer.grad_weights).max() if layer.grad_weights is not None else 0
-                        }
-                weight_stats.append(stats)
-
+            
             start_time = time.time()
             epoch_loss = 0
             n_samples = 0
@@ -188,7 +179,10 @@ class Trainer:
                 raise e
             
             self.visualizer.update(epoch_loss, val_loss, train_acc, val_acc)
-            epoch_times.append(time.time() - start_time)
+            this_epoch_time = time.time() - start_time
+            epoch_times.append(this_epoch_time)
+
+           
             # Early stopping check
             if val_loss < best_val_loss*(1 - min_delta):
                 best_val_loss = val_loss
@@ -226,11 +220,15 @@ class Trainer:
                     
                 # Log essential metrics
                 logger.info(f"Epoch {epoch}: Loss={epoch_loss:.4f}, Val Loss={val_loss:.4f}, "
-                f"Acc={train_acc:.1f}%, Val Acc={val_acc:.1f}%")
+                f"Acc={train_acc:.1f}%, Val Acc={val_acc:.1f}%"
+                f"Time for this epoch={this_epoch_time:.2f}s, LR={current_lr:.6f}, Max Grad={max_grad:.4f}")
                       
         # Save final metrics history plot
         final_metrics_path = os.path.join(self.visualizer.exp_dir, "final_metrics_history.png")
         self.visualizer.plot_metrics_history(filepath=final_metrics_path)
+        
+        logger.info(f"Final metrics history saved to {final_metrics_path}")
+        logger.info(f"Training completed in {len(epoch_times)} epochs with total time: {sum(epoch_times):.2f}s")
         
         return self.visualizer.history
                 
@@ -371,12 +369,6 @@ class Trainer:
             # Regular training but store history
             history = self.train(train_loader, val_loader, lr_scheduler=lr_scheduler, **kwargs)
             cv_visualizer.add_fold_history(history)
-            
-            # Add loss landscape visualization after training each fold
-            if kwargs.get('debug', False):
-                logger.info(f"\nLoss landscape for fold {fold_idx + 1}")
-                cv_visualizer.plot_loss_landscape(self.model, val_loader, self.loss_fn)
-
         
             # Compute fold score
             fold_score = self.validate(val_loader)
@@ -391,16 +383,6 @@ class Trainer:
         
         # Restore best model
         self.model = best_model
-        
-        # Plot final loss landscape
-        if kwargs.get('debug', False):
-            logger.info("\nFinal model loss landscape")
-            cv_visualizer.plot_loss_landscape(
-                self.model,
-                DataLoader(dataset, batch_size=kwargs.get('batch_size', 32)),
-                self.loss_fn
-            )
-    
     
         # Plot aggregated results
         cv_visualizer.plot_k_fold_results() 
@@ -418,9 +400,11 @@ class Trainer:
         }
         
     def cleanup(self):
-        """Release resources and reset state"""
+        """
+        Cleanup method to close all plots and set the visualizer to None.
+        """
         plt.close('all')
-        self.visualizer = TrainingVisualizer()
+        self.visualizer =  None
         
     def __enter__(self):
         return self
