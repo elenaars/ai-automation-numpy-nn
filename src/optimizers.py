@@ -79,7 +79,7 @@ class SGD(Optimizer):
         if params.shape != grads.shape:
             raise ValueError(f"SGD: Shape mismatch in SGD step: parameters {params.shape} and gradients {grads.shape} must have the same shape.")
         param_id = id(params)
-        if param_id not in self.velocity:
+        if param_id not in self.velocity or self.velocity[param_id].shape != params.shape:
             self.velocity[param_id] = np.zeros_like(params)
         # Apply weight decay
         grads += self.weight_decay * params

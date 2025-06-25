@@ -220,7 +220,7 @@ class Trainer:
                     
                 # Log essential metrics
                 logger.info(f"Epoch {epoch}: Loss={epoch_loss:.4f}, Val Loss={val_loss:.4f}, "
-                f"Acc={train_acc:.1f}%, Val Acc={val_acc:.1f}%"
+                f"Acc={train_acc:.1f}%, Val Acc={val_acc:.1f}%, "
                 f"Time for this epoch={this_epoch_time:.2f}s, LR={current_lr:.6f}, Max Grad={max_grad:.4f}")
                       
         # Save final metrics history plot
@@ -365,6 +365,7 @@ class Trainer:
             # Train this fold
         
             kwargs.pop('lr_scheduler', None)  # Remove scheduler from kwargs to avoid passing it to train method
+            kwargs.pop('optimizer', None)  # Remove optimizer from kwargs to avoid passing it to train method
             
             # Regular training but store history
             history = self.train(train_loader, val_loader, lr_scheduler=lr_scheduler, **kwargs)
