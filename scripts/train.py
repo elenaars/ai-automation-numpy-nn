@@ -1,5 +1,6 @@
-# script that takes all the necessary arguments from the user and trains the model
-
+""" Train a neural network model on a dataset with various configurations.
+This script supports training on different datasets, including MNIST, synthetic spirals,
+and others. It allows for hyperparameter tuning, cross-validation, and logging of results."""
 
 import argparse
 import os
@@ -16,13 +17,18 @@ from src.cross_validator import CrossValidator
 from src.utils import one_hot_encode
 
 
-def setup_experiment_dir(experiment_name: str) -> str:
+def setup_experiment_dir(experiment_name: str, logger: logging.Logger) -> str:
     """
     Set up clean experiment directory with sync
+    Args:
+        experiment_name (str): Name of the experiment to create a directory for.
+        logger (logging.Logger): Logger instance for logging information.
+    Returns:
+        str: Path to the created experiment directory.
     """
     exp_dir = os.path.join('experiments', experiment_name)
     if os.path.exists(exp_dir):
-        print(f"Removing existing experiment directory: {exp_dir}")
+        logger.info(f"Removing existing experiment directory: {exp_dir}")
         for root, dirs, files in os.walk(exp_dir, topdown=False):
             for name in files:
                 os.remove(os.path.join(root, name))
@@ -36,15 +42,17 @@ def setup_experiment_dir(experiment_name: str) -> str:
     os.sync()
     return exp_dir
 
-def main():
-    
+def main() -> None:
+    """
+    Main function to set up the training environment, parse arguments, load data,
+    initialize the model, and start training.
+    """
     # Set up logging
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: \n %(message)s \n"
     )
     logger = logging.getLogger("train")
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: \n %(message)s \n")
     
     #parse command line arguments
     parser = argparse.ArgumentParser(description="Train a neural network model.")
@@ -62,9 +70,10 @@ def main():
     parser.add_argument('--lr', type=float, default=0.01, help='Learning rate for the optimizer')
     parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for the optimizer')
     parser.add_argument('--weight-decay', type=float, default=1e-4, help='Weight decay (L2 regularization)')
-    parser.add_argument('--scheduler', type=str, default='warmup', choices=['none', 'warmup','cosine'], help='Learning rate scheduler type')
+    parser.add_argument('--scheduler', type=str, default='cosine', choices=['none', 'exp','cosine'], help='Learning rate scheduler type')
     parser.add_argument('--warmup-epochs', type=int, default=5, help='Number of warmup epochs for the scheduler')
     parser.add_argument('--eta-min', type=float, default=1e-6, help='Minimum learning rate for cosine annealing')
+    parser.add_argument('--gamma', type=float, default=0.99, help='Decay rate for exponential scheduler')
     parser.add_argument('--hidden-dims', type=str, default='128',
                        help='Comma-separated list of hidden layer dimensions (e.g., 256,128,64)')
     parser.add_argument('--seed', type=int, default=None, help='Random seed for reproducibility')
@@ -73,6 +82,13 @@ def main():
     parser.add_argument('--log-interval', type=int, default=100, help='Interval for logging training progress')
     args = parser.parse_args()
 
+    if args.epochs < 1:
+        logger.error("Number of epochs must be at least 1. Exiting.")
+        return
+    
+    if args.batch_size < 1:
+        logger.error("Batch size must be at least 1. Exiting.")
+        return 
 
     if args.seed is not None:
         np.random.seed(args.seed)
@@ -80,15 +96,19 @@ def main():
 
     data_dir = args.data_dir if args.data_dir else './data'
 
-    # download / generate dataset depending on many options
-    if args.dataset == 'synthetic':
+    # download / load / generate dataset depending on many options
+    try:
+        if args.dataset == 'synthetic':
             # Generate synthetic spiral dataset
             logger.info("Generating spiral dataset...")
             X, y = generate_spiral_data(args.n_samples, args.n_classes, args.class_sep, args.seed)    
-    else:
-        # Load dataset from data_utils
-        logger.info(f"Loading {args.dataset} dataset...")
-        X, y = load_openml_dataset(args.dataset, data_dir = data_dir)
+        else:
+            # Load dataset from data_utils
+            logger.info(f"Loading {args.dataset} dataset...")
+            X, y = load_openml_dataset(args.dataset, data_dir = data_dir)
+    except Exception as e:
+        logger.error(f"Failed to load/create dataset: {e}")
+        return
 
     #convert label to one-hot encoding
     logger.info("Converting labels to one-hot encoding...")
@@ -100,30 +120,27 @@ def main():
     logger.info(f"Train set size: {len(train_dataset)}, Test set size: {len(test_dataset)}")
     
     # Create model, loss function, optimizer, and trainer
-    
     input_dim = X.shape[1]
     hidden_dims  = [int(dim) for dim in args.hidden_dims.split(',')] or [128]  # Default to 128 if not specified
     num_classes = y.shape[1]
     
-    #print(f"Input dimension: {input_dim}, Hidden dimension: {hidden_dim}, Number of classes: {num_classes}")
-    
     # Create model architecture dynamically
-    initial_architecture = []
+    model_architecture = []
     prev_dim = input_dim
     
     for hidden_dim in hidden_dims:
-        initial_architecture.extend([
+        model_architecture.extend([
             (Linear, prev_dim, hidden_dim),
             ReLU
         ])
         prev_dim = hidden_dim
         
     # Add final layer
-    initial_architecture.append((Linear, prev_dim, num_classes))
+    model_architecture.append((Linear, prev_dim, num_classes))
     
     # Create layers from architecture specification
     layers = []
-    for layer_info in initial_architecture:
+    for layer_info in model_architecture:
         if isinstance(layer_info, tuple):
             cls, in_dim, out_dim = layer_info
             layers.append(cls(in_dim, out_dim))
@@ -136,38 +153,45 @@ def main():
     logger.info("Model architecture:")
     model.summary()
     
-    exp_dir = setup_experiment_dir(args.experiment_name)
+    exp_dir = setup_experiment_dir(args.experiment_name, logger)
     
-    # save model architecture to a file
-    #create experiment directory if it doesn't exist
+    # create experiment directory if it doesn't exist
     os.makedirs(exp_dir, exist_ok=True)
+    # save model architecture to a file
     arch_file = os.path.join(exp_dir, "model_architecture.txt")
         
     model.save_architecture(arch_file)
     logger.info("Model architecture saved to model_architecture.txt")
     # save experiment parameters to a file
-    with open(os.path.join(exp_dir, "experiment_params.txt"), "w") as f:
-        f.write(f"Dataset: {args.dataset}\n")
-        f.write(f"Number of samples: {args.n_samples}\n")
-        f.write(f"Number of classes: {args.n_classes}\n")
-        f.write(f"Class separation: {args.class_sep}\n")
-        f.write(f"Data directory: {args.data_dir}\n")
-        f.write(f"Number of folds: {args.n_folds}\n")
-        f.write(f"Epochs: {args.epochs}\n")
-        f.write(f"Batch size: {args.batch_size}\n")
-        f.write(f"Learning rate: {args.lr}\n")
-        f.write(f"Momentum: {args.momentum}\n")
-        f.write(f"Weight decay: {args.weight_decay}\n")
-        f.write(f"Scheduler: {args.scheduler}\n")
-        f.write(f"eta_min: {args.eta_min}\n")
-        f.write(f"Warmup epochs: {args.warmup_epochs}\n")
-        f.write(f"Experiment name: {args.experiment_name}\n")
-        f.write(f"Hidden dimensions: {hidden_dims}\n")
-        f.write(f"log interval: {args.log_interval}\n")
-        if args.seed is not None:
-            f.write(f"Seed: {args.seed}\n")
-    logger.info("Experiment parameters saved to experiment_params.txt")
-
+    try: 
+        with open(os.path.join(exp_dir, "experiment_params.txt"), "w") as f:
+            f.write(f"Dataset: {args.dataset}\n")
+            f.write(f"Number of samples: {args.n_samples}\n")
+            f.write(f"Number of classes: {args.n_classes}\n")
+            f.write(f"Class separation: {args.class_sep}\n")
+            f.write(f"Data directory: {args.data_dir}\n")
+            f.write(f"Number of folds: {args.n_folds}\n")
+            f.write(f"Epochs: {args.epochs}\n")
+            f.write(f"Batch size: {args.batch_size}\n")
+            f.write(f"Learning rate: {args.lr}\n")
+            f.write(f"Momentum: {args.momentum}\n")
+            f.write(f"Weight decay: {args.weight_decay}\n")
+            f.write(f"Scheduler: {args.scheduler}\n")
+            f.write(f"eta_min: {args.eta_min}\n")
+            f.write(f"Warmup epochs: {args.warmup_epochs}\n")
+            f.write(f"Gamma: {args.gamma}\n")
+            f.write(f"Experiment name: {args.experiment_name}\n")
+            f.write(f"Hidden dimensions: {hidden_dims}\n")
+            f.write(f"log interval: {args.log_interval}\n")
+            if args.seed is not None:
+                f.write(f"Seed: {args.seed}\n")
+        logger.info("Experiment parameters saved to experiment_params.txt")
+    except Exception as e:
+        logger.error(f"Failed to save experiment parameters: {e}")
+    
+   
+        
+        
     loss_fn = CrossEntropySoftMax()
     optimizer = SGD(learning_rate=args.lr)
 
@@ -207,6 +231,15 @@ def main():
     # Create test loader and evaluate
     test_acc = trainer.compute_accuracy(DataLoader(test_dataset))
     logger.info(f"Final Test Accuracy: {test_acc:.2f}%")
-
+    
+    #save final test accuracy to a file
+    try: 
+        with open(os.path.join(exp_dir, "final_test_accuracy.txt"), "w") as f:
+            f.write(f"Final Test Accuracy: {test_acc:.2f}%\n")
+        logger.info("Final test accuracy saved to final_test_accuracy.txt")
+    except Exception as e:
+        logger.error(f"Failed to save final test accuracy: {e}")        
+        
 if __name__ == "__main__":
+    """ Run the main function to start the training process. """
     main()
