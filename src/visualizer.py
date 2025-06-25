@@ -7,8 +7,6 @@ import os
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import Optional
-from matplotlib.gridspec import GridSpecFromSubplotSpec
 from .layers import Linear, Sequential
 from .optimizers import Optimizer
 from .losses import Loss
@@ -17,7 +15,13 @@ from .data_utils import DataLoader
 logger = logging.getLogger(__name__)
 
 class TrainingVisualizer:
+    
     def __init__(self, exp_dir: str) -> None:
+        """ 
+        Initialize the TrainingVisualizer with an experiment directory.
+        Args:            
+            exp_dir (str): Directory to save plots and results.
+        """
         self.exp_dir = exp_dir
         os.makedirs(exp_dir, exist_ok=True)
         self.history = {
@@ -60,6 +64,7 @@ class TrainingVisualizer:
         
         # Skip plotting if we are around epoch 0 with almost no history
         if len(self.history['loss']) <= 2:
+            logger.warning("Not enough training history to plot metrics (needs >2 epochs). Skipping.")
             return
         
 
@@ -81,13 +86,15 @@ class TrainingVisualizer:
         ax2.set_xlabel('Epochs')
         ax2.set_ylabel('Accuracy (%)')
         ax2.legend()
-        
-        plt.savefig(filepath)
+        try:
+            plt.savefig(filepath)
+            logger.info(f"Saved training plot to {filepath}")
+        except Exception as e:
+            logger.error(f"Failed to save training plot to {filepath}: {e}")
         plt.close(fig)
-        logger.info(f"Saved training plot to {filepath}")
            
     
-    def plot_decision_boundary(self, model: Sequential, x_train: np.ndarray, y_train: np.ndarray, filepath: str, ax: Optional[plt.Axes] = None) -> None:
+    def plot_decision_boundary(self, model: Sequential, x_train: np.ndarray, y_train: np.ndarray, filepath: str) -> None:
         """
         Plot the decision boundary of the model.
         Args:
@@ -95,7 +102,6 @@ class TrainingVisualizer:
             x_train (np.ndarray): Training data features.
             y_train (np.ndarray): Training data labels (one-hot encoded).
             filepath (str): Path to save the plot.
-            ax (Optional[plt.Axes]): Matplotlib axes to plot on, if None a new figure is created.
         Returns:
             None
         """
@@ -148,17 +154,19 @@ class TrainingVisualizer:
     
         fig.colorbar(scatter, ax=ax, label='Class')
         fig.tight_layout()
-        fig.savefig(filepath)
-        logger.info(f"Saved decision boundary plot to {filepath}")
+        try:
+            fig.savefig(filepath)
+            logger.info(f"Saved decision boundary plot to {filepath}")
+        except Exception as e:
+            logger.error(f"Failed to save decision boundary plot to {filepath}: {e}")
         plt.close(fig)
         
-    def weights_gradients_heatmap(self, model: Sequential, optimizer: Optimizer, filepath: str, ax: Optional[plt.Axes]=None) -> None:
+    def weights_gradients_heatmap(self, model: Sequential, optimizer: Optimizer, filepath: str) -> None:
         """
         Plot the weights and their updates during training.
         Args:
             model: Sequential model to visualize
             optimizer: Optimizer instance to calculate updates
-            ax: Matplotlib axes to plot on, if None a new figure is created
         Returns:
             None
         """
@@ -206,9 +214,12 @@ class TrainingVisualizer:
 
         plt.suptitle('Weight Values and Their Updates', y=1.02, fontsize=14)
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust layout to prevent overlap
-        plt.savefig(filepath)
+        try:
+            plt.savefig(filepath)
+            logger.info(f"Saved weights heatmap plot to {filepath}")
+        except Exception as e:
+            logger.error(f"Failed to save weights heatmap plot to {filepath}: {e}")
         plt.close(fig)
-        logger.info(f"Saved weights heatmap plot to {filepath}")
         
         
     def plot_loss_landscape(self, model: Sequential, loader: DataLoader, loss_fn: Loss, filepath:str) -> None:
@@ -261,22 +272,32 @@ class TrainingVisualizer:
         plt.grid(True, alpha = 0.3)
         
         plt.tight_layout()
-        fig.savefig(filepath)
+        try:
+            fig.savefig(filepath)
+            logger.info(f"Saved loss landscape plot to {filepath}")
+        except Exception as e:
+            logger.error(f"Failed to save loss landscape plot to {filepath}: {e}")
         plt.close(fig)
-        logger.info(f"Saved loss landscape plot to {filepath}")
 
         
 
 class KFoldVisualizer(TrainingVisualizer):
     """Extended visualizer for k-fold cross validation"""
+    
     def __init__(self, k_folds: int, exp_dir='kfold_plots') -> None:
+        """
+        Initialize KFoldVisualizer with number of folds and experiment directory.
+        Args:
+            k_folds (int): Number of folds for cross-validation.
+            exp_dir (str): Directory to save plots and results.
+        """
         super().__init__(exp_dir=exp_dir)
         self.k_folds = k_folds
         self.fold_histories = []
         self.exp_dir = exp_dir
         os.makedirs(self.exp_dir, exist_ok=True)
         
-    def add_fold_history(self, fold_history: dict) -> None:
+    def add_fold_history(self, fold_history: dict[str, list[float]]) -> None:
         """Store history for one fold"""
         self.fold_histories.append(fold_history)
     
@@ -290,6 +311,7 @@ class KFoldVisualizer(TrainingVisualizer):
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
         
         # Find the minimum length across all folds
+        # folds have different lengths if they were stopped early 
         min_epochs = min(len(hist['val_loss']) for hist in self.fold_histories)
     
         # Truncate all histories to the minimum length
@@ -325,6 +347,9 @@ class KFoldVisualizer(TrainingVisualizer):
     
         filepath = os.path.join(self.exp_dir, filename)
         plt.tight_layout()
-        plt.savefig(filepath)
+        try: 
+            plt.savefig(filepath)
+            logger.info(f"Saved K-fold results plot to {filepath}")
+        except Exception as e:
+            logger.error(f"Failed to save K-fold results plot to {filepath}: {e}")
         plt.close(fig)
-        logger.info(f"Saved K-fold results plot to {filepath}")
