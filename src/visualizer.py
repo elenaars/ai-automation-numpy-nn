@@ -1,4 +1,8 @@
-# class TrainingVisualizer that stores the training history and plots the loss and accuracy
+"""
+TrainingVisualizer class to store the training history and plot the loss and accuracy.
+It provides methods to update the training history and plot the loss and accuracy.
+"""
+
 import os
 import logging
 import matplotlib.pyplot as plt
@@ -13,11 +17,7 @@ from .data_utils import DataLoader
 logger = logging.getLogger(__name__)
 
 class TrainingVisualizer:
-    '''
-    TrainingVisualizer class to store the training history and plot the loss and accuracy.
-    It provides methods to update the training history and plot the loss and accuracy.
-    '''
-    def __init__(self, exp_dir: str)->None:
+    def __init__(self, exp_dir: str) -> None:
         self.exp_dir = exp_dir
         os.makedirs(exp_dir, exist_ok=True)
         self.history = {
@@ -29,8 +29,8 @@ class TrainingVisualizer:
         self.grid = None
         self.grid_coords = None
         
-    def update(self, loss: float, val_loss: float, train_acc: float, val_acc: float):
-        '''
+    def update(self, loss: float, val_loss: float, train_acc: float, val_acc: float) -> None:
+        """
         Update the training history with the current loss and accuracy.
         Args:   
             loss (float): Current loss.
@@ -39,19 +39,21 @@ class TrainingVisualizer:
             val_acc (float): Current validation accuracy.
         Returns:
             None
-        '''
+        """
         self.history['loss'].append(loss)
         self.history['val_loss'].append(val_loss)
         self.history['train_acc'].append(train_acc)
         self.history['val_acc'].append(val_acc)
 
     def plot_metrics_history(self,  filepath:str) -> None:
-        '''
+        """
         Plot the training history.
         It plots the loss and accuracy for both training and validation sets.
+        Args:
+            filepath (str): Path to save the plot.
         Returns:
             None
-        '''
+        """
         
         assert len(self.history['loss']) > 0, "No training history to plot."
         
@@ -81,12 +83,22 @@ class TrainingVisualizer:
         ax2.legend()
         
         plt.savefig(filepath)
-        plt.close()
+        plt.close(fig)
         logger.info(f"Saved training plot to {filepath}")
            
     
     def plot_decision_boundary(self, model: Sequential, x_train: np.ndarray, y_train: np.ndarray, filepath: str, ax: Optional[plt.Axes] = None) -> None:
-        
+        """
+        Plot the decision boundary of the model.
+        Args:
+            model (Sequential): The trained model.
+            x_train (np.ndarray): Training data features.
+            y_train (np.ndarray): Training data labels (one-hot encoded).
+            filepath (str): Path to save the plot.
+            ax (Optional[plt.Axes]): Matplotlib axes to plot on, if None a new figure is created.
+        Returns:
+            None
+        """
         if x_train.shape[1] != 2:
             return
         
@@ -141,7 +153,7 @@ class TrainingVisualizer:
         plt.close(fig)
         
     def weights_gradients_heatmap(self, model: Sequential, optimizer: Optimizer, filepath: str, ax: Optional[plt.Axes]=None) -> None:
-        '''
+        """
         Plot the weights and their updates during training.
         Args:
             model: Sequential model to visualize
@@ -149,7 +161,7 @@ class TrainingVisualizer:
             ax: Matplotlib axes to plot on, if None a new figure is created
         Returns:
             None
-        '''
+        """
         
         # Get all Linear layers
         linear_layers = [(i, layer) for i, layer in enumerate(model.layers) 
@@ -195,15 +207,20 @@ class TrainingVisualizer:
         plt.suptitle('Weight Values and Their Updates', y=1.02, fontsize=14)
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust layout to prevent overlap
         plt.savefig(filepath)
-        plt.close()
+        plt.close(fig)
         logger.info(f"Saved weights heatmap plot to {filepath}")
         
         
-    
-    
-        
-    def plot_loss_landscape(self, model: Sequential, loader: DataLoader, loss_fn: Loss, filepath:str)->None:
-        """Visualize loss landscape around current weights"""
+    def plot_loss_landscape(self, model: Sequential, loader: DataLoader, loss_fn: Loss, filepath:str) -> None:
+        """Visualize loss landscape around current weights
+        Args:
+            model (Sequential): The trained model.
+            loader (DataLoader): DataLoader for the dataset.
+            loss_fn (Loss): Loss function used for training.
+            filepath (str): Path to save the plot.
+        Returns:
+            None
+        """
         
         fig = plt.figure(figsize=(8, 6))
         
@@ -259,11 +276,11 @@ class KFoldVisualizer(TrainingVisualizer):
         self.exp_dir = exp_dir
         os.makedirs(self.exp_dir, exist_ok=True)
         
-    def add_fold_history(self, fold_history: dict) ->None:
+    def add_fold_history(self, fold_history: dict) -> None:
         """Store history for one fold"""
         self.fold_histories.append(fold_history)
     
-    def plot_k_fold_results(self, filename="kfold_results.png")-> None:
+    def plot_k_fold_results(self, filename:str = "kfold_results.png")-> None:
         """Plot aggregated results across folds"""
         
         if not self.fold_histories:
@@ -309,5 +326,5 @@ class KFoldVisualizer(TrainingVisualizer):
         filepath = os.path.join(self.exp_dir, filename)
         plt.tight_layout()
         plt.savefig(filepath)
-        plt.close()
+        plt.close(fig)
         logger.info(f"Saved K-fold results plot to {filepath}")
